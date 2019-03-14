@@ -6,7 +6,7 @@ import { html } from 'jsx-pragmatic';
 
 import { getSmartButtonClientScript, getSmartButtonRenderScript, startWatchers } from './watcher';
 import { getParams } from './params';
-import { EVENT } from './constants';
+import { EVENT, HTTP_HEADER } from './constants';
 import { serverErrorResponse, clientErrorResponse, htmlResponse, allowFrame, defaultLogger } from './util';
 import type { ExpressRequest, ExpressResponse, LoggerType } from './types';
 import { buttonStyle } from './style';
@@ -39,6 +39,8 @@ export function getButtonMiddleware({ logger = defaultLogger } : { logger? : Log
                 return clientErrorResponse(res, 'Please provide a fundingEligibility query parameter');
             }
 
+            const buyerCountry = req.get(HTTP_HEADER.PP_GEO_LOC);
+
             const buttonHTML = render.button.Buttons({ ...params, nonce, csp: { nonce }, fundingEligibility }).render(html());
 
             const pageHTML = `
@@ -52,7 +54,7 @@ export function getButtonMiddleware({ logger = defaultLogger } : { logger? : Log
                     <div id="card-fields-container" class="card-fields-container"></div>
                     ${ getSDKLoader({ nonce }) }
                     <script nonce="${ nonce }">${ client.script }</script>
-                    <script nonce="${ nonce }">spb.setupButton(${ JSON.stringify(fundingEligibility) })</script>
+                    <script nonce="${ nonce }">spb.setupButton(${ JSON.stringify({ fundingEligibility, buyerCountry }) })</script>
                 </body>
             `;
 
