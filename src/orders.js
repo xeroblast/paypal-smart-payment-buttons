@@ -95,8 +95,8 @@ export function validateOrder(orderID : string) : ZalgoPromise<void> {
     }
 
     return callGraphQL(`
-        checkout {
-            checkoutSession(token : "${ orderID }") {
+        query GetCheckoutDetails($orderID: String!) {
+            checkoutSession(token: $orderID) {
                 cart {
                     intent
                     returnUrl {
@@ -113,7 +113,7 @@ export function validateOrder(orderID : string) : ZalgoPromise<void> {
                 }
             }
         }
-    `).then(res => {
+    `, { orderID }).then(res => {
         const cart = res.data.checkout.checkoutSession.cart;
 
         const intent = (cart.intent.toLowerCase() === 'sale') ? INTENT.CAPTURE : cart.intent.toLowerCase();
