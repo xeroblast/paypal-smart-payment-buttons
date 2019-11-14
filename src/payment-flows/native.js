@@ -281,11 +281,16 @@ function initNative({ props, components, config, payment, serviceData } : { prop
                 throw new Error(`No window available to fall back to`);
             }
         }).catch(err => {
-            if (win) {
-                win.close();
-            }
+            closeWin();
 
-            throw err;
+            return ZalgoPromise.try(() => {
+                if (didAppSwitchHappen(win)) {
+                    instance = connectNative();
+                    return instance.close();
+                }
+            }).then(() => {
+                throw err;
+            });
         });
     });
 
@@ -312,10 +317,7 @@ function initNative({ props, components, config, payment, serviceData } : { prop
                 });
             }
         }).catch(err => {
-            if (win) {
-                win.close();
-            }
-
+            closeWin();
             throw err;
         });
     };
