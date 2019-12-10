@@ -1,5 +1,5 @@
 {
-  "name": "@paypal/smart-payment-buttons-hack",
+  "name": "paypal-smart-payment-buttons-hack",
   "version": "2.0.176",
   "publishConfig": {
     "registry": "https://registry.npmjs.com"
