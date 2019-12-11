@@ -27,6 +27,7 @@ type ButtonOpts = {|
     firebaseConfig? : FirebaseConfig,
     facilitatorAccessToken : string,
     content : ContentType,
+    customerID : string,
     eligibility : ?{
         cardFields : boolean,
         native : boolean
@@ -38,12 +39,12 @@ export function setupButton(opts : ButtonOpts) : ZalgoPromise<void> {
         throw new Error(`PayPal SDK not loaded`);
     }
 
-    const { facilitatorAccessToken, eligibility, fundingEligibility, buyerCountry: buyerGeoCountry, content,
+    const { facilitatorAccessToken, eligibility, fundingEligibility, buyerCountry: buyerGeoCountry, content, customerID,
         cspNonce: serverCSPNonce, merchantID: serverMerchantID, personalization, isCardFieldsExperimentEnabled, firebaseConfig } = opts;
 
     const clientID = window.xprops.clientID;
 
-    const serviceData = getServiceData({ eligibility, facilitatorAccessToken, buyerGeoCountry, serverMerchantID, fundingEligibility, personalization, isCardFieldsExperimentEnabled });
+    const serviceData = getServiceData({ eligibility, facilitatorAccessToken, buyerGeoCountry, serverMerchantID, fundingEligibility, personalization, isCardFieldsExperimentEnabled, customerID });
     const { merchantID } = serviceData;
 
     let props = getProps({ facilitatorAccessToken });

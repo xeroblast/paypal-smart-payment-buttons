@@ -23,3 +23,6 @@ export const BUTTON_CLIENT_MIN_JS = 'dist/smart-payment-buttons.min.js';
 
 export const MENU_CLIENT_JS = 'dist/smart-menu.js';
 export const MENU_CLIENT_MIN_JS = 'dist/smart-menu.min.js';
+
+export const MODAL_CLIENT_JS = 'dist/smart-modal.js';
+export const MODAL_CLIENT_MIN_JS = 'dist/smart-modal.min.js';

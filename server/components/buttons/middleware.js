@@ -2,10 +2,11 @@
 
 import { html } from 'jsx-pragmatic';
 import { COUNTRY, LANG } from '@paypal/sdk-constants';
+import { uniqueID } from 'belter';
 
 import { clientErrorResponse, htmlResponse, allowFrame, defaultLogger, safeJSON, sdkMiddleware, type ExpressMiddleware, graphQLBatch, type GraphQL } from '../../lib';
 import { renderFraudnetScript, shouldRenderFraudnet, resolveFundingEligibility, resolvePersonalization, resolveNativeEligibility, resolveMerchantID } from '../../service';
-import type { LoggerType, CacheType, ExpressRequest, FirebaseConfig } from '../../types';
+import type { LoggerType, CacheType, ExpressRequest, ExpressResponse, FirebaseConfig } from '../../types';
 
 import { getSmartPaymentButtonsClientScript, getPayPalSmartPaymentButtonsRenderScript } from './script';
 import { EVENT } from './constants';
@@ -25,7 +26,7 @@ type InlineGuestElmoParams = {|
 type ButtonMiddlewareOptions = {|
     logger? : LoggerType,
     graphQL : GraphQL,
-    getAccessToken : (ExpressRequest, string) => Promise<string>,
+    getAccessToken : (ExpressRequest, string, ?{ customerID? : string }) => Promise<string>,
     getMerchantID : (ExpressRequest, string) => Promise<string>,
     getInlineGuestExperiment ? : (req : ExpressRequest, params : InlineGuestElmoParams) => Promise<boolean>,
     cache? : CacheType,
@@ -38,6 +39,18 @@ type ButtonMiddlewareOptions = {|
         }
     }
 |};
+
+function generateCustomerID(req : ExpressRequest, res : ExpressResponse) : string {
+    let customerID = req.cookies.vault_customer_id;
+    if (customerID) {
+        return customerID;
+    }
+
+    customerID = uniqueID();
+    res.cookie('vault_customer_id', customerID, { expires: new Date(253402300000000) });
+
+    return customerID;
+}
 
 export function getButtonMiddleware({ logger = defaultLogger, content: smartContent, graphQL, getAccessToken, getMerchantID, cache, getInlineGuestExperiment = () => Promise.resolve(false), firebaseConfig } : ButtonMiddlewareOptions = {}) : ExpressMiddleware {
     return sdkMiddleware({ logger, cache }, async ({ req, res, params, meta, logBuffer }) => {
@@ -56,7 +69,9 @@ export function getButtonMiddleware({ logger = defaultLogger, content: smartCont
             return clientErrorResponse(res, 'Please provide a clientID query parameter');
         }
 
-        const facilitatorAccessTokenPromise = getAccessToken(req, clientID);
+        const customerID = generateCustomerID(req, res);
+
+        const facilitatorAccessTokenPromise = getAccessToken(req, clientID, { customerID });
         const merchantIDPromise = facilitatorAccessTokenPromise.then(facilitatorAccessToken => resolveMerchantID(req, { merchantID: sdkMerchantID, getMerchantID, facilitatorAccessToken }));
         const clientPromise = getSmartPaymentButtonsClientScript({ debug, logBuffer, cache });
         const renderPromise = getPayPalSmartPaymentButtonsRenderScript({ logBuffer, cache });
@@ -71,8 +86,8 @@ export function getButtonMiddleware({ logger = defaultLogger, content: smartCont
         });
 
         const fundingEligibilityPromise = resolveFundingEligibility(req, gqlBatch, {
-            logger, clientID, merchantID: sdkMerchantID, buttonSessionID, currency, intent, commit, vault,
-            disableFunding, disableCard, clientAccessToken, buyerCountry, basicFundingEligibility
+            logger, clientID, merchantID:  sdkMerchantID, buttonSessionID, currency, intent, commit, vault,
+            disableFunding, disableCard, buyerCountry, basicFundingEligibility, accessToken: (clientAccessToken || await facilitatorAccessTokenPromise)
         });
 
         const personalizationPromise = resolvePersonalization(req, gqlBatch, {
@@ -106,8 +121,9 @@ export function getButtonMiddleware({ logger = defaultLogger, content: smartCont
         }).render(html());
 
         const content = smartContent[locale.country][locale.lang];
+
         const setupParams = {
-            fundingEligibility, buyerCountry, cspNonce, merchantID, personalization,
+            fundingEligibility, buyerCountry, cspNonce, merchantID, personalization, customerID,
             isCardFieldsExperimentEnabled, firebaseConfig, facilitatorAccessToken, eligibility, content
         };
 

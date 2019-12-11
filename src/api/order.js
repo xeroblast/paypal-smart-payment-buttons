@@ -4,7 +4,7 @@ import type { ZalgoPromise } from 'zalgo-promise/src';
 import { FPTI_KEY, FUNDING } from '@paypal/sdk-constants/src';
 import { request, noop } from 'belter/src';
 
-import { SMART_API_URI, ORDERS_API_URL, VALIDATE_PAYMENT_METHOD_API } from '../config';
+import { SMART_API_URI, ORDERS_API_URL, VALIDATE_PAYMENT_METHOD_API, BASE_SMART_API_URL } from '../config';
 import { getLogger } from '../lib';
 import { FPTI_TRANSITION, FPTI_CONTEXT_TYPE, HEADERS } from '../constants';
 
@@ -32,7 +32,7 @@ type OrderAPIOptions = {|
     facilitatorAccessToken : string,
     buyerAccessToken? : ?string,
     partnerAttributionID : ?string,
-    isNativeTransaction : boolean
+    isNativeTransaction? : boolean
 |};
 
 export function createOrderID(order : OrderCreateRequest, { facilitatorAccessToken, partnerAttributionID } : OrderAPIOptions) : ZalgoPromise<string> {
@@ -297,4 +297,15 @@ export function updateClientConfig({ orderID, fundingSource, integrationArtifact
         `,
         variables: { orderID, fundingSource, integrationArtifact, userExperienceFlow, productFlow }
     }).then(noop);
+}
+
+export function vaultOptIn(orderID : string, { facilitatorAccessToken } : OrderAPIOptions) : ZalgoPromise<OrderResponse> {
+    return callSmartAPI({
+        method:      'post',
+        url:         `${ BASE_SMART_API_URL }/vault/opt-in`,
+        accessToken: facilitatorAccessToken,
+        json:        {
+            orderID
+        }
+    });
 }

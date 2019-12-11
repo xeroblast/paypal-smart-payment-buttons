@@ -345,12 +345,12 @@ export type FundingEligibilityOptions = {|
     disableCard : $ReadOnlyArray<?$Values<typeof CARD>>,
     merchantID : ?$ReadOnlyArray<string>,
     buttonSessionID : string,
-    clientAccessToken : ?string,
+    accessToken : ?string,
     basicFundingEligibility : FundingEligibility
 |};
 
 export async function resolveFundingEligibility(req : ExpressRequest, gqlBatch : GraphQLBatch, { logger, clientID, merchantID, buttonSessionID,
-    currency, intent, commit, vault, disableFunding, disableCard, clientAccessToken, buyerCountry, basicFundingEligibility } : FundingEligibilityOptions) : Promise<FundingEligibility> {
+    currency, intent, commit, vault, disableFunding, disableCard, accessToken, buyerCountry, basicFundingEligibility } : FundingEligibilityOptions) : Promise<FundingEligibility> {
 
     try {
         const ip = req.ip;
@@ -369,7 +369,7 @@ export async function resolveFundingEligibility(req : ExpressRequest, gqlBatch :
                 clientID, merchantID, buyerCountry, cookies, ip, currency, intent, commit,
                 vault, disableFunding, disableCard, userAgent, buttonSessionID
             },
-            accessToken: clientAccessToken
+            accessToken
         });
 
         return strictMerge(basicFundingEligibility, result.fundingEligibility, (first, second) => {

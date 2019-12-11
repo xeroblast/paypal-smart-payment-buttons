@@ -167,7 +167,8 @@ export type ServiceData = {|
     eligibility : {
         cardFields : boolean,
         native : boolean
-    }
+    },
+    customerID : string
 |};
 
 type ServiceDataOptions = {|
@@ -180,16 +181,18 @@ type ServiceDataOptions = {|
     eligibility : ?{
         native : boolean,
         cardFields : boolean
-    }
+    },
+    customerID : string
 |};
 
-export function getServiceData({ facilitatorAccessToken, buyerGeoCountry, isCardFieldsExperimentEnabled, fundingEligibility, personalization, serverMerchantID, eligibility } : ServiceDataOptions) : ServiceData {
+export function getServiceData({ facilitatorAccessToken, buyerGeoCountry, isCardFieldsExperimentEnabled, fundingEligibility, personalization, serverMerchantID, eligibility, customerID } : ServiceDataOptions) : ServiceData {
     return {
         merchantID:   serverMerchantID,
         buyerCountry: buyerGeoCountry || COUNTRY.US,
         fundingEligibility,
         personalization,
         facilitatorAccessToken,
+        customerID,
         eligibility:  {
             cardFields: isCardFieldsExperimentEnabled,
             native:     eligibility ? eligibility.native : false

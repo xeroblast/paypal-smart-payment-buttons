@@ -61,6 +61,25 @@ export const WEBPACK_CONFIG_MENU_DEBUG = getSmartWebpackConfig({
     minify:   false
 });
 
+export const WEBPACK_CONFIG_MODAL = getSmartWebpackConfig({
+    entry:    'src/modal',
+    filename: 'smart-modal',
+    minify:   false
+});
+
+export const WEBPACK_CONFIG_MODAL_MIN = getSmartWebpackConfig({
+    entry:    'src/modal',
+    filename: 'smart-modal',
+    minify:   true
+});
+
+export const WEBPACK_CONFIG_MODAL_DEBUG = getSmartWebpackConfig({
+    entry:    'src/modal',
+    filename: 'smart-modal',
+    debug:    true,
+    minify:   false
+});
+
 export const WEBPACK_CONFIG_TEST = getWebpackConfig({
     modulename: MODULE_NAME,
     test:       true,
@@ -76,5 +95,7 @@ export default [
     WEBPACK_CONFIG_BUTTONS,
     WEBPACK_CONFIG_BUTTONS_MIN,
     WEBPACK_CONFIG_MENU,
-    WEBPACK_CONFIG_MENU_MIN
+    WEBPACK_CONFIG_MENU_MIN,
+    WEBPACK_CONFIG_MODAL,
+    WEBPACK_CONFIG_MODAL_MIN
 ];

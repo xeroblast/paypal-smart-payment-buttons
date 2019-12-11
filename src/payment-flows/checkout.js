@@ -33,6 +33,44 @@ function getRenderWindow() : Object {
     }
 }
 
+function runVaultOptIn({ props, serviceData } : { props : Props, serviceData : ServiceData }) : ZalgoPromise<void> {
+    const { clientID, createOrder } = props;
+    const { customerID } = serviceData;
+
+    return createOrder().then(orderID => {
+        return new ZalgoPromise((resolve, reject) => {
+            const onComplete = () => {
+                resolve();
+                // eslint-disable-next-line no-use-before-define
+                return close();
+            };
+
+            const onCancel = () => {
+                resolve();
+                // eslint-disable-next-line no-use-before-define
+                return close();
+            };
+
+            const onError = (err) => {
+                reject(err);
+                // eslint-disable-next-line no-use-before-define
+                return close();
+            };
+                
+            const { renderTo, close } = window.paypal.Modal({
+                clientID,
+                orderID,
+                customerID,
+                onComplete,
+                onCancel,
+                onError
+            });
+
+            return renderTo(getRenderWindow(), 'body').catch(reject);
+        });
+    });
+}
+
 function setupCheckout({ components } : { components : Components }) : ZalgoPromise<void> {
     const { Checkout } = components;
 
@@ -92,6 +130,34 @@ function isVaultAutoSetupEligible({ vault, clientAccessToken, createBillingAgree
     }
 
     return false;
+}
+
+type VaultOptInEligibleProps = {|
+    vault : boolean,
+    createBillingAgreement : ?CreateBillingAgreement,
+    createSubscription : ?CreateSubscription,
+    fundingSource : $Values<typeof FUNDING>
+|};
+
+
+function isVaultOptInEligible({ vault, createBillingAgreement, createSubscription, fundingSource } : VaultOptInEligibleProps) : boolean {
+    if (createBillingAgreement || createSubscription) {
+        return false;
+    }
+    
+    if (vault) {
+        return false;
+    }
+
+    if (fundingSource !== FUNDING.PAYPAL && fundingSource !== FUNDING.CARD) {
+        return false;
+    }
+
+    if (!window.paypal.Modal) {
+        return false;
+    }
+
+    return true;
 }
 
 type EnableVaultSetupOptions = {|
@@ -182,6 +248,12 @@ function initCheckout({ props, components, serviceData, payment, config } : { pr
     
                 // eslint-disable-next-line no-use-before-define
                 return close().then(() => {
+                    if (isVaultOptInEligible({ vault, createBillingAgreement, createSubscription, fundingSource })) {
+                        return runVaultOptIn({ props, serviceData }).then(() => {
+                            return onApprove({ payerID, paymentID, billingToken, subscriptionID, buyerAccessToken }, { restart }).catch(noop);
+                        });
+                    }
+
                     return onApprove({ payerID, paymentID, billingToken, subscriptionID, buyerAccessToken }, { restart }).catch(noop);
                 });
             },
