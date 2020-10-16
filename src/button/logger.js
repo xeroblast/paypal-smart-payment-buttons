@@ -40,7 +40,7 @@ type ButtonLoggerOptions = {|
 |};
 
 export function setupButtonLogger({ env, sessionID, buttonSessionID, clientID, partnerAttributionID, commit, sdkCorrelationID, buttonCorrelationID, locale,
-    merchantID, merchantDomain, version, style, fundingSource, getQueriedEligibleFunding } : ButtonLoggerOptions) : ZalgoPromise<void> {
+    merchantID, merchantDomain, version, style, fundingSource, getQueriedEligibleFunding = () => ZalgoPromise.resolve([]) } : ButtonLoggerOptions) : ZalgoPromise<void> {
 
     const logger = getLogger();
 
