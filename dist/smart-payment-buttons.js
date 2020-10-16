@@ -1635,7 +1635,7 @@ window.spb = function(modules) {
             logger_getLogger().info("rest_api_create_order_token");
             var headers = ((_headers10 = {}).authorization = "Bearer " + accessToken, _headers10["paypal-partner-attribution-id"] = partnerAttributionID, 
             _headers10["paypal-client-metadata-id"] = clientMetadataID, _headers10["x-app-name"] = "smart-payment-buttons", 
-            _headers10["x-app-version"] = "2.0.330", _headers10);
+            _headers10["x-app-version"] = "2.0.331", _headers10);
             var paymentSource = {
                 token: {
                     id: paymentMethodID,
@@ -3679,10 +3679,10 @@ window.spb = function(modules) {
                                                 return body.data;
                                             }));
                                         }({
-                                            name: "getInstallmentsForOnboardingFlows",
-                                            query: "\n            query getInstallmentsForOnboardingFlows(\n                $paymentToken: String\n                $token: String!\n                $country: CountryCodes!\n            ) {\n                getInstallmentsForOnboardingFlows(\n                paymentToken: $paymentToken\n                token: $token\n                buyerCountry: $country\n                ) {\n                    discount {\n                        amount {\n                            currencyCode\n                            currencyFormatSymbolISOCurrency\n                            currencyValue\n                        }\n                        percentage\n                    }\n                    monthlyPayment {\n                        currencyCode\n                        currencyFormatSymbolISOCurrency\n                        currencyValue\n                    }\n                    totalCost {\n                        currencyCode\n                        currencyFormatSymbolISOCurrency\n                        currencyValue\n                    }\n                    term\n                    intervalDuration\n                }\n            }\n        ",
+                                            name: "getInstallments",
+                                            query: "\n            query getInstallments(\n                $vaultedToken: String\n                $token: String!\n                $country: CountryCodes!\n            ) {\n                getInstallments(\n                    vaultedToken: $vaultedToken\n                    token: $token\n                    buyerCountry: $country\n                ) {\n                    discount {\n                        amount {\n                            currencyCode\n                            currencyFormatSymbolISOCurrency\n                            currencyValue\n                        }\n                        percentage\n                    }\n                    monthlyPayment {\n                        currencyCode\n                        currencyFormatSymbolISOCurrency\n                        currencyValue\n                    }\n                    totalCost {\n                        currencyCode\n                        currencyFormatSymbolISOCurrency\n                        currencyValue\n                    }\n                    term\n                    intervalDuration\n                }\n            }\n        ",
                                             variables: {
-                                                paymentToken: _ref.paymentToken,
+                                                vaultedToken: _ref.vaultedToken,
                                                 token: _ref.token,
                                                 country: _ref.country
                                             },
@@ -3690,14 +3690,14 @@ window.spb = function(modules) {
                                             _headers)
                                         });
                                     }({
-                                        paymentToken: _ref.paymentMethodID,
+                                        vaultedToken: _ref.paymentMethodID,
                                         country: _ref.buyerCountry,
                                         token: orderID,
                                         buyerAccessToken: _ref.accessToken
                                     }).then((function(installmentsResponse) {
-                                        if (installmentsResponse && installmentsResponse.getInstallmentsForOnboardingFlows) {
+                                        if (installmentsResponse && installmentsResponse.getInstallments) {
                                             var _getLogger$info$track;
-                                            var installmentsData = installmentsResponse.getInstallmentsForOnboardingFlows;
+                                            var installmentsData = installmentsResponse.getInstallments;
                                             getLogger().info("installments_loaded").track((_getLogger$info$track = {}, _getLogger$info$track.transition_name = "installments_load", 
                                             _getLogger$info$track.context_type = "EC-Token", _getLogger$info$track.token = orderID, 
                                             _getLogger$info$track.context_id = orderID, _getLogger$info$track)).flush();
@@ -5714,7 +5714,9 @@ window.spb = function(modules) {
                 fundingEligibility: fundingEligibility
             });
             var setupButtonLogsTask = function(_ref) {
-                var env = _ref.env, sessionID = _ref.sessionID, buttonSessionID = _ref.buttonSessionID, clientID = _ref.clientID, partnerAttributionID = _ref.partnerAttributionID, commit = _ref.commit, sdkCorrelationID = _ref.sdkCorrelationID, buttonCorrelationID = _ref.buttonCorrelationID, locale = _ref.locale, merchantID = _ref.merchantID, merchantDomain = _ref.merchantDomain, version = _ref.version, style = _ref.style, fundingSource = _ref.fundingSource, getQueriedEligibleFunding = _ref.getQueriedEligibleFunding;
+                var env = _ref.env, sessionID = _ref.sessionID, buttonSessionID = _ref.buttonSessionID, clientID = _ref.clientID, partnerAttributionID = _ref.partnerAttributionID, commit = _ref.commit, sdkCorrelationID = _ref.sdkCorrelationID, buttonCorrelationID = _ref.buttonCorrelationID, locale = _ref.locale, merchantID = _ref.merchantID, merchantDomain = _ref.merchantDomain, version = _ref.version, style = _ref.style, fundingSource = _ref.fundingSource, _ref$getQueriedEligib = _ref.getQueriedEligibleFunding, getQueriedEligibleFunding = void 0 === _ref$getQueriedEligib ? function() {
+                    return promise_ZalgoPromise.resolve([]);
+                } : _ref$getQueriedEligib;
                 var logger = logger_getLogger();
                 !function(_ref) {
                     var env = _ref.env, sessionID = _ref.sessionID, clientID = _ref.clientID, partnerAttributionID = _ref.partnerAttributionID, commit = _ref.commit, sdkCorrelationID = _ref.sdkCorrelationID, locale = _ref.locale, merchantID = _ref.merchantID, merchantDomain = _ref.merchantDomain, version = _ref.version;
@@ -5769,7 +5771,7 @@ window.spb = function(modules) {
                     var _ref2;
                     return (_ref2 = {}).state_name = "smart_button", _ref2.context_type = "button_session_id", 
                     _ref2.context_id = buttonSessionID, _ref2.state_name = "smart_button", _ref2.button_session_id = buttonSessionID, 
-                    _ref2.button_version = "2.0.330", _ref2.button_correlation_id = buttonCorrelationID, 
+                    _ref2.button_version = "2.0.331", _ref2.button_correlation_id = buttonCorrelationID, 
                     _ref2;
                 }));
                 (function() {
