@@ -1,4 +1,5 @@
 /* @flow */
+/* eslint  max-lines: off */
 
 import type { ZalgoPromise } from 'zalgo-promise/src';
 import { FPTI_KEY, FUNDING, WALLET_INSTRUMENT, INTENT } from '@paypal/sdk-constants/src';
@@ -20,7 +21,13 @@ export type OrderCreateRequest = {|
             payee? : {|
                 merchant_id? : string
             |}
-        |}>
+        |}>,
+    mockErrorCode? : string
+|};
+
+export type OrderCaptureRequest = {|
+    orderID : string,
+    mockErrorCode? : string
 |};
 
 export type OrderResponse = {||};
@@ -35,19 +42,25 @@ type OrderAPIOptions = {|
     forceRestAPI? : boolean
 |};
 
+
 export function createOrderID(order : OrderCreateRequest, { facilitatorAccessToken, partnerAttributionID } : OrderAPIOptions) : ZalgoPromise<string> {
     getLogger().info(`rest_api_create_order_id`);
+
+    const headers : Object = { [HEADERS.PARTNER_ATTRIBUTION_ID]: partnerAttributionID || '' };
+
+    if (order.mockErrorCode) {
+        headers[HEADERS.PAYPAL_MOCK_RESPONSE] = `{"mock_application_codes": "${ order.mockErrorCode }"}`;
+    }
+
+    delete order.mockErrorCode;
 
     return callRestAPI({
         accessToken: facilitatorAccessToken,
         method:      `post`,
         url:         `${ ORDERS_API_URL }`,
         data:        order,
-        headers:     {
-            [ HEADERS.PARTNER_ATTRIBUTION_ID ]: partnerAttributionID || ''
-        }
+        headers
     }).then((body) : string => {
-
         const orderID = body && body.id;
 
         if (!orderID) {
@@ -83,22 +96,26 @@ export function getOrder(orderID : string, { facilitatorAccessToken, buyerAccess
         });
 }
 
-export function captureOrder(orderID : string, { facilitatorAccessToken, buyerAccessToken, partnerAttributionID, forceRestAPI = false } : OrderAPIOptions) : ZalgoPromise<OrderResponse> {
+export function captureOrder(order : OrderCaptureRequest, { facilitatorAccessToken, buyerAccessToken, partnerAttributionID, forceRestAPI = false } : OrderAPIOptions) : ZalgoPromise<OrderResponse> {
+    const headers : Object = { [HEADERS.PARTNER_ATTRIBUTION_ID]: partnerAttributionID || '' };
+
+    if (order.mockErrorCode) {
+        headers[HEADERS.PAYPAL_MOCK_RESPONSE] = `{"mock_application_codes": "${ order.mockErrorCode }"}`;
+    }
+
     return forceRestAPI
         ? callRestAPI({
             accessToken: facilitatorAccessToken,
             method:      `post`,
-            url:         `${ ORDERS_API_URL }/${ orderID }/capture`,
-            headers:     {
-                [HEADERS.PARTNER_ATTRIBUTION_ID]: partnerAttributionID || ''
-            }
+            url:         `${ ORDERS_API_URL }/${ order.orderID }/capture`,
+            headers
         })
         : callSmartAPI({
             accessToken: buyerAccessToken,
             method:      'post',
-            url:         `${ SMART_API_URI.ORDER }/${ orderID }/capture`,
+            url:         `${ SMART_API_URI.ORDER }/${ order.orderID }/capture`,
             headers:     {
-                [HEADERS.CLIENT_CONTEXT]: orderID
+                [HEADERS.CLIENT_CONTEXT]: order.orderID
             }
         });
 }

@@ -22,7 +22,9 @@ export const HEADERS = {
 
     PARTNER_ATTRIBUTION_ID: 'paypal-partner-attribution-id',
     CLIENT_METADATA_ID:     'paypal-client-metadata-id',
-    PAYPAL_DEBUG_ID:        'paypal-debug-id'
+    PAYPAL_DEBUG_ID:        'paypal-debug-id',
+
+    PAYPAL_MOCK_RESPONSE:    'paypal-mock-response'
 };
 
 export const DATA_ATTRIBUTES = {

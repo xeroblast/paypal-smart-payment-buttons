@@ -79,12 +79,16 @@ function buildOrderActions({ intent, orderID, restart, facilitatorAccessToken, b
         return getOrder(orderID, { facilitatorAccessToken, buyerAccessToken, partnerAttributionID, forceRestAPI });
     });
 
-    const capture = memoize(() => {
+    const capture = memoize((data) => {
+        const order : Object = { ...data };
+
+        order.orderID = orderID;
+
         if (intent !== INTENT.CAPTURE) {
             throw new Error(`Use ${ SDK_QUERY_KEYS.INTENT }=${ INTENT.CAPTURE } to use client-side capture`);
         }
 
-        return captureOrder(orderID, { facilitatorAccessToken, buyerAccessToken, partnerAttributionID, forceRestAPI })
+        return captureOrder(order, { facilitatorAccessToken, buyerAccessToken, partnerAttributionID, forceRestAPI })
             .finally(get.reset)
             .finally(capture.reset)
             .catch(handleProcessorError);
