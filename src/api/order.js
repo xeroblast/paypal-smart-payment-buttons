@@ -42,7 +42,6 @@ type OrderAPIOptions = {|
     forceRestAPI? : boolean
 |};
 
-
 export function createOrderID(order : OrderCreateRequest, { facilitatorAccessToken, partnerAttributionID } : OrderAPIOptions) : ZalgoPromise<string> {
     getLogger().info(`rest_api_create_order_id`);
 
@@ -50,9 +49,8 @@ export function createOrderID(order : OrderCreateRequest, { facilitatorAccessTok
 
     if (order.mockErrorCode) {
         headers[HEADERS.PAYPAL_MOCK_RESPONSE] = `{"mock_application_codes": "${ order.mockErrorCode }"}`;
+        delete order.mockErrorCode;
     }
-
-    delete order.mockErrorCode;
 
     return callRestAPI({
         accessToken: facilitatorAccessToken,
