@@ -87,7 +87,8 @@ type NativeEligibilityOptions = {|
     shippingCallbackEnabled : boolean,
     platform : $Values<typeof PLATFORM>,
     cookies : string,
-    orderID? : ?string
+    orderID? : ?string,
+    enableFunding : ?$ReadOnlyArray<$Values<typeof FUNDING>>
 |};
 
 type NativeEligibility = {|
@@ -96,7 +97,7 @@ type NativeEligibility = {|
     |}
 |};
 
-export function getNativeEligibility({ vault, shippingCallbackEnabled, merchantID, clientID, buyerCountry, currency, buttonSessionID, cookies, orderID } : NativeEligibilityOptions) : ZalgoPromise<NativeEligibility> {
+export function getNativeEligibility({ vault, shippingCallbackEnabled, merchantID, clientID, buyerCountry, currency, buttonSessionID, cookies, orderID, enableFunding } : NativeEligibilityOptions) : ZalgoPromise<NativeEligibility> {
     const userAgent = getUserAgent();
 
     return callGraphQL({
@@ -112,7 +113,8 @@ export function getNativeEligibility({ vault, shippingCallbackEnabled, merchantI
                 $userAgent : String,
                 $buttonSessionID : String,
                 $cookies : String,
-                $orderID : String
+                $orderID : String,
+                $enableFunding : String
             ) {
                 mobileSDKEligibility(
                     vault: $vault,
@@ -124,7 +126,8 @@ export function getNativeEligibility({ vault, shippingCallbackEnabled, merchantI
                     userAgent: $userAgent,
                     buttonSessionID: $buttonSessionID,
                     cookies: $cookies,
-                    token: $orderID
+                    token: $orderID,
+                    enableFunding: $enableFunding
                 ) {
                     paypal {
                         eligibility
@@ -139,7 +142,7 @@ export function getNativeEligibility({ vault, shippingCallbackEnabled, merchantI
         `,
         variables: {
             vault, shippingCallbackEnabled, merchantID, clientID,
-            buyerCountry, currency, userAgent, buttonSessionID, cookies, orderID
+            buyerCountry, currency, userAgent, buttonSessionID, cookies, orderID, enableFunding
         }
     }).then((gqlResult) => {
         if (!gqlResult || !gqlResult.mobileSDKEligibility) {
