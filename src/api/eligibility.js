@@ -17,12 +17,11 @@ type GetFundingEligibilityOptions = {|
     intent : $Values<typeof INTENT>,
     commit : boolean,
     vault : boolean,
-    enableFunding : ?$ReadOnlyArray<$Values<typeof FUNDING>>,
     disableFunding : ?$ReadOnlyArray<$Values<typeof FUNDING>>,
     disableCard : ?$ReadOnlyArray<$Values<typeof CARD>>
 |};
 
-export function getFundingEligibility(query : string, { accessToken, clientID, merchantID, currency, buyerCountry, intent, commit, vault, enableFunding, disableFunding, disableCard } : GetFundingEligibilityOptions) : ZalgoPromise<FundingEligibilityType> {
+export function getFundingEligibility(query : string, { accessToken, clientID, merchantID, currency, buyerCountry, intent, commit, vault, disableFunding, disableCard } : GetFundingEligibilityOptions) : ZalgoPromise<FundingEligibilityType> {
     return callGraphQL({
         name:  'GetFundingEligibility',
         query: `
@@ -34,7 +33,6 @@ export function getFundingEligibility(query : string, { accessToken, clientID, m
                 $intent:FundingEligibilityIntent,
                 $commit:Boolean,
                 $vault:Boolean,
-                $enableFunding:[ SupportedPaymentMethodsType ],
                 $disableFunding:[ SupportedPaymentMethodsType ],
                 $disableCard:[ SupportedCardsType ]
             ) {
@@ -45,7 +43,6 @@ export function getFundingEligibility(query : string, { accessToken, clientID, m
                 intent: $intent,
                 commit: $commit,
                 vault: $vault,
-                enableFunding: $enableFunding,
                 disableFunding: $disableFunding,
                 disableCard: $disableCard,
                 merchantId: $merchantID
@@ -62,7 +59,6 @@ export function getFundingEligibility(query : string, { accessToken, clientID, m
             commit,
             vault,
             intent:         intent ? intent.toUpperCase() : intent,
-            enableFunding:  enableFunding ? enableFunding.map(f => f && f.toUpperCase()) : enableFunding,
             disableFunding: disableFunding ? disableFunding.map(f => f && f.toUpperCase()) : disableFunding,
             disableCard:    disableCard ? disableCard.map(f => f && f.toUpperCase()) : disableCard
         },
@@ -99,7 +95,7 @@ type NativeEligibility = {|
 
 export function getNativeEligibility({ vault, shippingCallbackEnabled, merchantID, clientID, buyerCountry, currency, buttonSessionID, cookies, orderID, enableFunding } : NativeEligibilityOptions) : ZalgoPromise<NativeEligibility> {
     const userAgent = getUserAgent();
-
+    
     return callGraphQL({
         name:  'GetNativeEligibility',
         query: `

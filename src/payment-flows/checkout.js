@@ -99,7 +99,6 @@ type IsFundingSourceVaultableOptions = {|
     intent : $Values<typeof INTENT>,
     commit : boolean,
     vault : boolean,
-    enableFunding : ?$ReadOnlyArray<$Values<typeof FUNDING>>,
     disableFunding : ?$ReadOnlyArray<$Values<typeof FUNDING>>,
     disableCard : ?$ReadOnlyArray<$Values<typeof CARD>>
 |};
