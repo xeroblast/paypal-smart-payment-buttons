@@ -28,8 +28,7 @@ const POST_MESSAGE = {
     ON_APPROVE:         'onApprove',
     ON_CANCEL:          'onCancel',
     ON_COMPLETE:        'onComplete',
-    ON_ERROR:           'onError',
-    ON_FALLBACK:        'onFallback'
+    ON_ERROR:           'onError'
 };
 
 const SOCKET_MESSAGE = {
