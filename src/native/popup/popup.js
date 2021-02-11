@@ -1,14 +1,18 @@
 /* @flow */
 
 import { parseQuery, cleanup } from 'belter/src';
-import type { ZalgoPromise } from 'zalgo-promise/src';
+import { ZalgoPromise } from 'zalgo-promise/src';
 import { ENV, FUNDING, FPTI_KEY } from '@paypal/sdk-constants/src';
 
 import type { LocaleType } from '../../types';
 import { FPTI_CUSTOM_KEY, FPTI_TRANSITION } from '../../constants';
 import { getPostRobot, setupNativeLogger, getSDKVersion } from '../lib';
+import { isAndroidChrome } from '../../lib';
 
 import { MESSAGE, HASH, EVENT } from './constants';
+
+const ANDROID_PAYPAL_APP_ID = 'com.paypal.android.p2pmobile';
+const ANDROID_VENMO_APP_ID  = 'com.venmo';
 
 export type NativePopupOptions = {|
     parentDomain : string,
@@ -25,10 +29,61 @@ type NativePopup = {|
     destroy : () => ZalgoPromise<void>
 |};
 
+type AndroidApp = {|
+    id? : string,
+    installed : boolean,
+    version? : string
+|};
+
+function isAndroidAppInstalled(appId : string) : ZalgoPromise<AndroidApp> {
+    if (window.navigator && window.navigator.getInstalledRelatedApps) {
+        return new ZalgoPromise(resolve => {
+            window.navigator.getInstalledRelatedApps().then(result => {
+                if (result && result.length) {
+                    const apps = result.filter(app => app.id === appId);
+                    if (apps && apps.length) {
+                        const id = apps[0].id;
+                        const version = apps[0].version;
+
+                        resolve({ id, installed: true, version });
+                    } else {
+                        resolve({ installed: false });
+                    }
+                }
+                
+                resolve({ installed: false });
+            });
+        });
+    }
+
+    return ZalgoPromise.resolve({ installed: true }); // assume true unless we can prove false
+}
+
+function isAndroidPayPalAppInstalled() : ZalgoPromise<AndroidApp> {
+    return isAndroidAppInstalled(ANDROID_PAYPAL_APP_ID).then(app => {
+        return { ...app };
+    });
+}
+
+function isAndroidVenmoAppInstalled() : ZalgoPromise<AndroidApp> {
+    return isAndroidAppInstalled(ANDROID_VENMO_APP_ID).then(app => {
+        return { ...app };
+    });
+}
+
 export function setupNativePopup({ parentDomain, env, sessionID, buttonSessionID, sdkCorrelationID,
     clientID, fundingSource, locale } : NativePopupOptions) : NativePopup {
 
     let logger;
+    let appInstalledPromise;
+
+    if (isAndroidChrome()) {
+        if (fundingSource === FUNDING.PAYPAL) {
+            appInstalledPromise = isAndroidPayPalAppInstalled();
+        } else if (fundingSource === FUNDING.VENMO) {
+            appInstalledPromise = isAndroidVenmoAppInstalled();
+        }
+    }
 
     const sdkVersion = getSDKVersion();
     if (env && sessionID && buttonSessionID && sdkCorrelationID && locale) {
@@ -113,7 +168,7 @@ export function setupNativePopup({ parentDomain, env, sessionID, buttonSessionID
 
     const pageUrl = `${ window.location.href  }#${  HASH.CLOSE }`;
 
-    sendToParent(MESSAGE.AWAIT_REDIRECT, { pageUrl }).then(({ redirect = true, redirectUrl }) => {
+    sendToParent(MESSAGE.AWAIT_REDIRECT, { appInstalledPromise, pageUrl }).then(({ redirect = true, redirectUrl }) => {
         if (!redirect) {
             return;
         }

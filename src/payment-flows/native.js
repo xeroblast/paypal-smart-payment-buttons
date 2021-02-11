@@ -78,14 +78,9 @@ const PARTIAL_ENCODING_CLIENT = [
     'AeG7a0wQ2s97hNLb6yWzDqYTsuD-4AaxDHjz4I2EWMKN6vktKYqKJhtGqmH2cNj_JyjHR4Xj9Jt6ORHs'
 ];
 
-const ANDROID_PAYPAL_APP_ID = 'com.paypal.android.p2pmobile';
-const ANDROID_VENMO_APP_ID  = 'com.venmo';
-
 let clean;
 let initialPageUrl;
 let nativeEligibility : NativeEligibility;
-let androidPayPalInstalled;
-let androidVenmoInstalled;
 
 type NativeSocketOptions = {|
     sessionUID : string,
@@ -185,30 +180,6 @@ function isNativeOptedIn({ props } : {| props : ButtonProps |}) : boolean {
     return false;
 }
 
-function isAndroidAppInstalled(appId : string) : ZalgoPromise<boolean> {
-    if (window.navigator && window.navigator.getInstalledRelatedApps) {
-        return new ZalgoPromise(resolve => {
-            window.navigator.getInstalledRelatedApps().then(result => {
-                if (result && result.length) {
-                    resolve(result.some(app => app.id === appId));
-                }
-                
-                resolve(false);
-            });
-        });
-    }
-
-    return ZalgoPromise.resolve(true); // assume true if we can't tell
-}
-
-function isAndroidPayPalAppInstalled() : ZalgoPromise<boolean> {
-    return isAndroidAppInstalled(ANDROID_PAYPAL_APP_ID).then(installed => installed);
-}
-
-function isAndroidVenmoAppInstalled() : ZalgoPromise<boolean> {
-    return isAndroidAppInstalled(ANDROID_VENMO_APP_ID).then(installed => installed);
-}
-
 function isNativeEligible({ props, config, serviceData } : IsEligibleOptions) : boolean {
 
     const { platform, onShippingChange, createBillingAgreement, createSubscription, env } = props;
@@ -274,14 +245,6 @@ function isNativePaymentEligible({ payment, props, serviceData } : IsPaymentElig
         return true;
     }
 
-    if (isAndroidChrome() && fundingSource === FUNDING.PAYPAL) {
-        return androidPayPalInstalled;
-    }
-    
-    if (isAndroidChrome() && fundingSource === FUNDING.VENMO) {
-        return androidVenmoInstalled;
-    }
-
     if (eligibility.nativeCheckout && eligibility.nativeCheckout[fundingSource]) {
         return true;
     }
@@ -314,14 +277,6 @@ function setupNative({ props, serviceData } : SetupOptions) : ZalgoPromise<void>
 
             getPageUrl().then(pageUrl => {
                 initialPageUrl = pageUrl;
-            }),
-
-            isAndroidPayPalAppInstalled().then(installed => {
-                androidPayPalInstalled = installed;
-            }),
-
-            isAndroidVenmoAppInstalled().then(installed => {
-                androidVenmoInstalled = installed;
             })
         ]);
     }).then(noop);
@@ -958,13 +913,14 @@ function initNative({ props, components, config, payment, serviceData } : InitOp
             });
         });
 
-        const awaitRedirectListener = listen(popupWin, getNativePopupDomain(), POST_MESSAGE.AWAIT_REDIRECT, ({ data: { pageUrl } }) => {
+        const awaitRedirectListener = listen(popupWin, getNativePopupDomain(), POST_MESSAGE.AWAIT_REDIRECT, ({ data: { appInstalledPromise, pageUrl } }) => {
             getLogger().info(`native_post_message_await_redirect`).flush();
 
             return ZalgoPromise.hash({
-                valid:    validatePromise,
-                eligible: eligibilityPromise
-            }).then(({ valid, eligible }) => {
+                valid:      validatePromise,
+                eligible:   eligibilityPromise,
+                app:        appInstalledPromise
+            }).then(({ valid, eligible, app }) => {
 
                 if (!valid) {
                     return close().then(() => {
@@ -972,7 +928,7 @@ function initNative({ props, components, config, payment, serviceData } : InitOp
                     });
                 }
 
-                if (!eligible) {
+                if (!eligible || !app.installed) {
                     return createOrder().then(orderID => {
                         const fallbackUrl = getDelayedNativeFallbackUrl({ sessionUID, pageUrl, orderID });
                         return { redirect: true, redirectUrl: fallbackUrl };
