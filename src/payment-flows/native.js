@@ -103,15 +103,7 @@ const getNativeSocket = memoize(({ sessionUID, firebaseConfig, version } : Nativ
     });
     nativeSocket.onError(err => {
         const stringifiedError = stringifyError(err);
-        if (stringifiedError.indexOf('permission_denied') !== -1) {
-            getLogger()
-                .info('firebase_connection_reinitialized', { sessionUID })
-                .track({
-                    [FPTI_KEY.STATE]:           FPTI_STATE.BUTTON,
-                    [FPTI_KEY.TRANSITION]:      FPTI_TRANSITION.NATIVE_APP_SWITCH_ACK,
-                    [FPTI_CUSTOM_KEY.ERR_DESC]: `[Native Socket Info] ${ stringifiedError }`
-                }).flush();
-        } else {
+        if (stringifiedError.indexOf('permission_denied') === -1) {
             getLogger().error('native_socket_error', { err: stringifiedError })
                 .track({
                     [FPTI_KEY.STATE]:           FPTI_STATE.BUTTON,
@@ -570,7 +562,15 @@ function initNative({ props, components, config, payment, serviceData } : InitOp
         const actions = { restart: () => fallbackToWebCheckout() };
         return ZalgoPromise.all([
             onApprove(data, actions)
-                .catch(err => onError(err)),
+                .catch(err => {
+                    getLogger().info(`native_message_onapprove`, { payerID, paymentID, billingToken })
+                        .track({
+                            [FPTI_KEY.TRANSITION]:      FPTI_TRANSITION.NATIVE_ON_APPROVE_ERROR,
+                            [FPTI_CUSTOM_KEY.INFO_MSG]: `Error: ${ stringifyError(err) }`
+                        })
+                        .flush();
+                    onError(err);
+                }),
             close()
         ]).then(noop);
     };

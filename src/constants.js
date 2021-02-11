@@ -131,6 +131,7 @@ export const FPTI_TRANSITION = {
     NATIVE_POPUP_FALLBACK:              ('popup_fallback' : 'popup_fallback'),
     NATIVE_POPUP_SHOWN:                 ('popup_shown' : 'popup_shown'),
     NATIVE_ON_APPROVE:                  ('native_onapprove' : 'native_onapprove'),
+    NATIVE_ON_APPROVE_ERROR:            ('native_onapprove_error' : 'native_onapprove_error'),
     NATIVE_ON_CANCEL:                   ('native_oncancel' : 'native_oncancel'),
     NATIVE_ON_CLICK_INVALID:            ('native_onclick_invalid' : 'native_onclick_invalid'),
     NATIVE_ON_COMPLETE:                 ('native_oncomplete' : 'native_oncomplete'),
