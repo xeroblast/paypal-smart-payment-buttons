@@ -607,7 +607,7 @@ function initNative({ props, components, config, payment, serviceData } : InitOp
         fallbackToWebCheckout();
     };
 
-    // This is where we connect tp Firebase
+    // This is where we initialize and configure the Firebase connection
     const connectNative = memoize(({ sessionUID } : {| sessionUID : string |}) : NativeConnection => {
         const socket = getNativeSocket({
             sessionUID, firebaseConfig, version: sdkVersion
