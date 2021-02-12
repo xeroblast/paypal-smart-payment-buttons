@@ -920,7 +920,15 @@ function initNative({ props, components, config, payment, serviceData } : InitOp
                 valid:      validatePromise,
                 eligible:   eligibilityPromise
             }).then(({ valid, eligible }) => {
-                getLogger().info(`native_installed_app`, { app: { ...app } }).flush();
+                Object.keys(app).forEach(key => {
+                    getLogger().info(`native_app_${ key }`, { [key]: app[key] })
+                        .track({
+                            [FPTI_KEY.STATE]:           FPTI_STATE.BUTTON,
+                            [FPTI_KEY.TRANSITION]:      FPTI_TRANSITION.NATIVE_ATTEMPT_APP_SWITCH,
+                            [FPTI_CUSTOM_KEY.INFO_MSG]: `native_app_${ key }: ${ app[key] }`
+                        })
+                        .flush();
+                });
                 if (!valid) {
                     return close().then(() => {
                         return { redirect: false };
