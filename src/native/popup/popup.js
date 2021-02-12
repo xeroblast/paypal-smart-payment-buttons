@@ -76,7 +76,7 @@ export function setupNativePopup({ parentDomain, env, sessionID, buttonSessionID
     clientID, fundingSource, locale } : NativePopupOptions) : NativePopup {
 
     let logger;
-    let appInstalledPromise;
+    let appInstalledPromise = ZalgoPromise.resolve({ installed: true });
 
     if (isAndroidChrome()) {
         if (fundingSource === FUNDING.PAYPAL) {
