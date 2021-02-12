@@ -921,7 +921,7 @@ function initNative({ props, components, config, payment, serviceData } : InitOp
                 eligible:   eligibilityPromise,
                 app:        appInstalledPromise
             }).then(({ valid, eligible, app }) => {
-
+                getLogger().info(`native_installed_app`, { app: { ...app } }).flush();
                 if (!valid) {
                     return close().then(() => {
                         return { redirect: false };

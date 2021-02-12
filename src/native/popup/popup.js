@@ -36,6 +36,7 @@ type AndroidApp = {|
 |};
 
 function isAndroidAppInstalled(appId : string) : ZalgoPromise<AndroidApp> {
+    // assume true unless we can prove false
     if (window.navigator && window.navigator.getInstalledRelatedApps) {
         return new ZalgoPromise(resolve => {
             window.navigator.getInstalledRelatedApps().then(result => {
@@ -51,12 +52,12 @@ function isAndroidAppInstalled(appId : string) : ZalgoPromise<AndroidApp> {
                     }
                 }
                 
-                resolve({ installed: false });
+                resolve({ installed: true });
             });
         });
     }
 
-    return ZalgoPromise.resolve({ installed: true }); // assume true unless we can prove false
+    return ZalgoPromise.resolve({ installed: true });
 }
 
 function isAndroidPayPalAppInstalled() : ZalgoPromise<AndroidApp> {

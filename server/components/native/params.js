@@ -31,7 +31,7 @@ type NativePopupParams = {|
 |};
 
 function getParentDomain(params : NativePopupInputParams) : string {
-    const { parentDomain } = params;
+    const { env, parentDomain } = params;
 
     if (!parentDomain) {
         throw new makeError(ERROR_CODE.VALIDATION_ERROR, `Parent domain not passed`);
@@ -42,7 +42,7 @@ function getParentDomain(params : NativePopupInputParams) : string {
     }
 
     // eslint-disable-next-line security/detect-unsafe-regex
-    if (!parentDomain.match(/\.paypal\.com(:\d{1,4})?$/)) {
+    if (env !== ENV.LOCAL && !parentDomain.match(/\.paypal\.com(:\d{1,4})?$/)) {
         throw new makeError(ERROR_CODE.VALIDATION_ERROR, `Expected paypal parentDomain`);
     }
 
