@@ -453,7 +453,7 @@ function initNative({ props, components, config, payment, serviceData } : InitOp
             return 'https://history.paypal.com';
         }
 
-        return NATIVE_POPUP_DOMAIN[env];
+        return 'http://localhost:8001'; //NATIVE_POPUP_DOMAIN[env];
     });
 
     const getWebCheckoutUrl = memoize(({ orderID }) : string => {
@@ -913,14 +913,13 @@ function initNative({ props, components, config, payment, serviceData } : InitOp
             });
         });
 
-        const awaitRedirectListener = listen(popupWin, getNativePopupDomain(), POST_MESSAGE.AWAIT_REDIRECT, ({ data: { appInstalledPromise, pageUrl } }) => {
+        const awaitRedirectListener = listen(popupWin, getNativePopupDomain(), POST_MESSAGE.AWAIT_REDIRECT, ({ data: { app, pageUrl } }) => {
             getLogger().info(`native_post_message_await_redirect`).flush();
 
             return ZalgoPromise.hash({
                 valid:      validatePromise,
-                eligible:   eligibilityPromise,
-                app:        appInstalledPromise
-            }).then(({ valid, eligible, app }) => {
+                eligible:   eligibilityPromise
+            }).then(({ valid, eligible }) => {
                 getLogger().info(`native_installed_app`, { app: { ...app } }).flush();
                 if (!valid) {
                     return close().then(() => {

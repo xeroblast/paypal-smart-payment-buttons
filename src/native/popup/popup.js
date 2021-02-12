@@ -38,22 +38,20 @@ type AndroidApp = {|
 function isAndroidAppInstalled(appId : string) : ZalgoPromise<AndroidApp> {
     // assume true unless we can prove false
     if (window.navigator && window.navigator.getInstalledRelatedApps) {
-        return new ZalgoPromise(resolve => {
-            window.navigator.getInstalledRelatedApps().then(result => {
-                if (result && result.length) {
-                    const apps = result.filter(app => app.id === appId);
-                    if (apps && apps.length) {
-                        const id = apps[0].id;
-                        const version = apps[0].version;
+        return window.navigator.getInstalledRelatedApps().then(result => {
+            if (result && result.length) {
+                const apps = result.filter(app => app.id === appId);
+                if (apps && apps.length) {
+                    const id = apps[0].id;
+                    const version = apps[0].version;
 
-                        resolve({ id, installed: true, version });
-                    } else {
-                        resolve({ installed: false });
-                    }
+                    return ZalgoPromise.resolve({ id, installed: true, version });
+                } else {
+                    return ZalgoPromise.resolve({ installed: false });
                 }
-                
-                resolve({ installed: true });
-            });
+            }
+            
+            return ZalgoPromise.resolve({ installed: true });
         });
     }
 
@@ -169,31 +167,33 @@ export function setupNativePopup({ parentDomain, env, sessionID, buttonSessionID
 
     const pageUrl = `${ window.location.href  }#${  HASH.CLOSE }`;
 
-    sendToParent(MESSAGE.AWAIT_REDIRECT, { appInstalledPromise, pageUrl }).then(({ redirect = true, redirectUrl }) => {
-        if (!redirect) {
-            return;
-        }
-
-        window.location = redirectUrl;
-
-        let didRedirect = false;
-
-        const markRedirect = () => {
-            didRedirect = true;
-        };
-
-        window.addEventListener('beforeunload', markRedirect);
-        clean.register(() => window.removeEventListener('beforeunload', markRedirect));
-
-        window.addEventListener('unload', markRedirect);
-        clean.register(() => window.removeEventListener('unload', markRedirect));
-
-        const timer = setTimeout(() => {
-            if (!didRedirect) {
-                sendToParent(MESSAGE.DETECT_APP_SWITCH);
+    appInstalledPromise.then(app => {
+        sendToParent(MESSAGE.AWAIT_REDIRECT, { app, pageUrl }).then(({ redirect = true, redirectUrl }) => {
+            if (!redirect) {
+                return;
             }
-        }, 500);
-        clean.register(() => clearTimeout(timer));
+
+            window.location = redirectUrl;
+
+            let didRedirect = false;
+
+            const markRedirect = () => {
+                didRedirect = true;
+            };
+
+            window.addEventListener('beforeunload', markRedirect);
+            clean.register(() => window.removeEventListener('beforeunload', markRedirect));
+
+            window.addEventListener('unload', markRedirect);
+            clean.register(() => window.removeEventListener('unload', markRedirect));
+
+            const timer = setTimeout(() => {
+                if (!didRedirect) {
+                    sendToParent(MESSAGE.DETECT_APP_SWITCH);
+                }
+            }, 500);
+            clean.register(() => clearTimeout(timer));
+        });
     });
 
     return {
