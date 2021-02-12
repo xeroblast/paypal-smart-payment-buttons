@@ -449,6 +449,11 @@ function initNative({ props, components, config, payment, serviceData } : InitOp
     });
 
     const getNativePopupDomain = memoize(() : string => {
+        // eslint-disable-next-line no-process-env
+        if (process.env.NODE_ENV === 'development') {
+            return 'http://localhost:8001';
+        }
+        
         if (env === ENV.SANDBOX && window.xprops && window.xprops.useCorrectNativeSandboxDomain) {
             return 'https://history.paypal.com';
         }
