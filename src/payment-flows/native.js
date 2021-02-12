@@ -924,7 +924,7 @@ function initNative({ props, components, config, payment, serviceData } : InitOp
                     getLogger().info(`native_app_${ key }`, { [key]: app[key] })
                         .track({
                             [FPTI_KEY.STATE]:           FPTI_STATE.BUTTON,
-                            [FPTI_KEY.TRANSITION]:      FPTI_TRANSITION.NATIVE_ATTEMPT_APP_SWITCH,
+                            [FPTI_KEY.TRANSITION]:      FPTI_TRANSITION.NATIVE_APP_INSTALLED,
                             [FPTI_CUSTOM_KEY.INFO_MSG]: `native_app_${ key }: ${ app[key] }`
                         })
                         .flush();
