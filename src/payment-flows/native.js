@@ -453,7 +453,7 @@ function initNative({ props, components, config, payment, serviceData } : InitOp
             return 'https://history.paypal.com';
         }
 
-        return 'http://localhost:8001'; //NATIVE_POPUP_DOMAIN[env];
+        return NATIVE_POPUP_DOMAIN[env];
     });
 
     const getWebCheckoutUrl = memoize(({ orderID }) : string => {
