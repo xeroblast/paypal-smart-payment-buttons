@@ -160,7 +160,7 @@ describe('native chrome cases', () => {
                 }
             });
 
-            const { expect: expectSocket, fallback } = getNativeFirebaseMock({
+            const { expect: expectSocket, onFallback } = getNativeFirebaseMock({
                 getSessionUID: () => {
                     if (!sessionUID) {
                         throw new Error(`Session UID not present`);
@@ -171,7 +171,7 @@ describe('native chrome cases', () => {
                 extraHandler: expect('extraHandler', ({ message_name, message_type }) => {
                     if (message_name === 'setProps' && message_type === 'request') {
                         mockWindow.expectClose();
-                        ZalgoPromise.delay(50).then(fallback);
+                        ZalgoPromise.delay(50).then(onFallback);
                     }
                 })
             });
