@@ -143,10 +143,14 @@ export function setupNativePopup({ parentDomain, env, sessionID, buttonSessionID
         const [ hash, queryString ] = hashString.split('?');
 
         if (logger) {
+            const { appVersion, bundleIdentifier } = parseQuery(queryString);
+
             logger.info('native_popup_hashchange', { hash, queryString })
                 .track({
-                    [FPTI_KEY.TRANSITION]:      FPTI_TRANSITION.NATIVE_POPUP_HASHCHANGE,
-                    [FPTI_CUSTOM_KEY.INFO_MSG]: `${ window.location.href }`
+                    [FPTI_KEY.TRANSITION]:                  FPTI_TRANSITION.NATIVE_POPUP_HASHCHANGE,
+                    [FPTI_KEY.MOBILE_APP_VERSION]:          appVersion,
+                    [FPTI_KEY.MOBILE_BUNDLE_IDENTIFIER]:    bundleIdentifier,
+                    [FPTI_CUSTOM_KEY.INFO_MSG]:             `${ window.location.href }`
                 }).flush();
         }
 
