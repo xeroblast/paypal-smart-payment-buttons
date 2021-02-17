@@ -1,6 +1,6 @@
 /* @flow */
 
-import { parseQuery, cleanup } from 'belter/src';
+import { parseQuery, cleanup, stringifyErrorMessage } from 'belter/src';
 import { ZalgoPromise } from 'zalgo-promise/src';
 import { ENV, FUNDING, FPTI_KEY } from '@paypal/sdk-constants/src';
 
@@ -76,18 +76,38 @@ export function setupNativePopup({ parentDomain, env, sessionID, buttonSessionID
     let logger;
     let appInstalledPromise = ZalgoPromise.resolve({ installed: true });
 
-    if (isAndroidChrome()) {
-        if (fundingSource === FUNDING.PAYPAL) {
-            appInstalledPromise = isAndroidPayPalAppInstalled();
-        } else if (fundingSource === FUNDING.VENMO) {
-            appInstalledPromise = isAndroidVenmoAppInstalled();
-        }
-    }
-
     const sdkVersion = getSDKVersion();
     if (env && sessionID && buttonSessionID && sdkCorrelationID && locale) {
         logger = setupNativeLogger({ env, sessionID, buttonSessionID, sdkCorrelationID,
             clientID, fundingSource, sdkVersion, locale });
+    }
+
+    if (isAndroidChrome()) {
+        if (fundingSource === FUNDING.PAYPAL) {
+            appInstalledPromise = isAndroidPayPalAppInstalled().catch(err => {
+                if (logger) {
+                    logger.info('native_popup_android_paypal_app_installed_error')
+                        .track({
+                            [FPTI_KEY.TRANSITION]:      FPTI_TRANSITION.NATIVE_POPUP_ANDROID_PAYPAL_APP_ERROR,
+                            [FPTI_CUSTOM_KEY.ERR_DESC]: `Error: ${ stringifyErrorMessage(err) }`
+                        }).flush();
+                }
+
+                return { installed: true };
+            });
+        } else if (fundingSource === FUNDING.VENMO) {
+            appInstalledPromise = isAndroidVenmoAppInstalled().catch(err => {
+                if (logger) {
+                    logger.info('native_popup_android_venmo_app_installed_error')
+                        .track({
+                            [FPTI_KEY.TRANSITION]:      FPTI_TRANSITION.NATIVE_POPUP_ANDROID_VENMO_APP_ERROR,
+                            [FPTI_CUSTOM_KEY.ERR_DESC]: `Error: ${ stringifyErrorMessage(err) }`
+                        }).flush();
+                }
+
+                return { installed: true };
+            });
+        }
     }
 
     const opener = window.opener;

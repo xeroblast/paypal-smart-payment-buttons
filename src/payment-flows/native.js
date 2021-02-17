@@ -53,7 +53,7 @@ const NATIVE_DOMAIN = {
 // Popup domain needs to be different than native domain for app switch to work on iOS
 const NATIVE_POPUP_DOMAIN = {
     [ ENV.TEST ]:       'https://history.paypal.com',
-    [ ENV.LOCAL ]:      'https://history.paypal.com',
+    [ ENV.LOCAL ]:      'http://localhost:8001',
     [ ENV.STAGE ]:      'https://history.paypal.com',
     [ ENV.SANDBOX ]:    'https://www.sandbox.paypal.com',
     [ ENV.PRODUCTION ]: 'https://history.paypal.com'
@@ -449,11 +449,6 @@ function initNative({ props, components, config, payment, serviceData } : InitOp
     });
 
     const getNativePopupDomain = memoize(() : string => {
-        // eslint-disable-next-line no-process-env
-        if (process.env.NODE_ENV === 'development') {
-            return 'http://localhost:8001';
-        }
-        
         if (env === ENV.SANDBOX && window.xprops && window.xprops.useCorrectNativeSandboxDomain) {
             return 'https://history.paypal.com';
         }
@@ -925,22 +920,25 @@ function initNative({ props, components, config, payment, serviceData } : InitOp
                 valid:      validatePromise,
                 eligible:   eligibilityPromise
             }).then(({ valid, eligible }) => {
-                Object.keys(app).forEach(key => {
-                    getLogger().info(`native_app_${ key }`, { [key]: app[key] })
-                        .track({
-                            [FPTI_KEY.STATE]:           FPTI_STATE.BUTTON,
-                            [FPTI_KEY.TRANSITION]:      FPTI_TRANSITION.NATIVE_APP_INSTALLED,
-                            [FPTI_CUSTOM_KEY.INFO_MSG]: `native_app_${ key }: ${ app[key] }`
-                        })
-                        .flush();
-                });
+                if (app) {
+                    Object.keys(app).forEach(key => {
+                        getLogger().info(`native_app_${ app.installed ? 'installed' : 'not_installed' }_${ key }`, { [key]: app[key] })
+                            .track({
+                                [FPTI_KEY.STATE]:           FPTI_STATE.BUTTON,
+                                [FPTI_KEY.TRANSITION]:      FPTI_TRANSITION.NATIVE_APP_INSTALLED,
+                                [FPTI_CUSTOM_KEY.INFO_MSG]: `native_app_${ app.installed ? 'installed' : 'not_installed' }_${ key }: ${ app[key] }`
+                            })
+                            .flush();
+                    });
+                }
+
                 if (!valid) {
                     return close().then(() => {
                         return { redirect: false };
                     });
                 }
 
-                if (!eligible || !app.installed) {
+                if (!eligible || (app && !app.installed)) {
                     return createOrder().then(orderID => {
                         const fallbackUrl = getDelayedNativeFallbackUrl({ sessionUID, pageUrl, orderID });
                         return { redirect: true, redirectUrl: fallbackUrl };
