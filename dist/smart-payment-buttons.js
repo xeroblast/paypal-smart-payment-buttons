@@ -1278,6 +1278,9 @@ window.spb = function(modules) {
                 return !1;
             }));
         }
+        function getRandomInteger(range) {
+            return Math.floor(Math.random() * range);
+        }
         var http_headerBuilders = [];
         function request(_ref) {
             var url = _ref.url, _ref$method = _ref.method, method = void 0 === _ref$method ? "get" : _ref$method, _ref$headers = _ref.headers, headers = void 0 === _ref$headers ? {} : _ref$headers, json = _ref.json, data = _ref.data, body = _ref.body, _ref$win = _ref.win, win = void 0 === _ref$win ? window : _ref$win, _ref$timeout = _ref.timeout, timeout = void 0 === _ref$timeout ? 0 : _ref$timeout;
@@ -1554,17 +1557,18 @@ window.spb = function(modules) {
         function isEmailAddress(str) {
             return Boolean(str.match(/^.+@.+\..+$/));
         }
-        function createExperiment(name, sample) {
+        function createExperiment(name, _ref) {
+            var sample = _ref.sample, _ref$sticky = _ref.sticky, sticky = void 0 === _ref$sticky || _ref$sticky;
             var logger = logger_getLogger();
             return function(_ref) {
-                var name = _ref.name, _ref$sample = _ref.sample, sample = void 0 === _ref$sample ? 50 : _ref$sample, _ref$logTreatment = _ref.logTreatment, logTreatment = void 0 === _ref$logTreatment ? src_util_noop : _ref$logTreatment, _ref$logCheckpoint = _ref.logCheckpoint, logCheckpoint = void 0 === _ref$logCheckpoint ? src_util_noop : _ref$logCheckpoint;
-                var throttle = function(name) {
+                var name = _ref.name, _ref$sample = _ref.sample, sample = void 0 === _ref$sample ? 50 : _ref$sample, _ref$logTreatment = _ref.logTreatment, logTreatment = void 0 === _ref$logTreatment ? src_util_noop : _ref$logTreatment, _ref$logCheckpoint = _ref.logCheckpoint, logCheckpoint = void 0 === _ref$logCheckpoint ? src_util_noop : _ref$logCheckpoint, _ref$sticky = _ref.sticky;
+                var throttle = void 0 === _ref$sticky || _ref$sticky ? function(name) {
                     return getBelterExperimentStorage().getState((function(state) {
                         state.throttlePercentiles = state.throttlePercentiles || {};
-                        state.throttlePercentiles[name] = state.throttlePercentiles[name] || Math.floor(100 * Math.random());
+                        state.throttlePercentiles[name] = state.throttlePercentiles[name] || getRandomInteger(100);
                         return state.throttlePercentiles[name];
                     }));
-                }(name);
+                }(name) : getRandomInteger(100);
                 var group;
                 var treatment = name + "_" + (group = throttle < sample ? "test" : sample >= 50 || sample <= throttle && throttle < 2 * sample ? "control" : "throttle");
                 var started = !1;
@@ -1585,16 +1589,18 @@ window.spb = function(modules) {
                     log: function(checkpoint, payload) {
                         void 0 === payload && (payload = {});
                         if (!started) return this;
-                        isEventUnique(name + "_" + treatment + "_" + JSON.stringify(payload)) && logTreatment({
+                        isEventUnique(treatment + "_" + JSON.stringify(payload)) && logTreatment({
                             name: name,
                             treatment: treatment,
-                            payload: payload
+                            payload: payload,
+                            throttle: throttle
                         });
-                        isEventUnique(name + "_" + treatment + "_" + checkpoint + "_" + JSON.stringify(payload)) && logCheckpoint({
+                        isEventUnique(treatment + "_" + checkpoint + "_" + JSON.stringify(payload)) && logCheckpoint({
                             name: name,
                             treatment: treatment,
                             checkpoint: checkpoint,
-                            payload: payload
+                            payload: payload,
+                            throttle: throttle
                         });
                         return this;
                     },
@@ -1611,18 +1617,21 @@ window.spb = function(modules) {
             }({
                 name: name,
                 sample: sample,
-                logTreatment: function(_ref) {
+                logTreatment: function(_ref2) {
                     var _extends2;
-                    var treatment = _ref.treatment, payload = _ref.payload;
+                    var treatment = _ref2.treatment, payload = _ref2.payload;
                     var fullPayload = _extends(((_extends2 = {}).state_name = "PXP_CHECK", _extends2.transition_name = "process_pxp_check", 
                     _extends2.pxp_exp_id = name, _extends2.pxp_trtmnt_id = treatment, _extends2), payload);
                     logger.track(fullPayload);
                     logger.flush();
                 },
-                logCheckpoint: function(_ref2) {
-                    logger.info(name + "_" + _ref2.treatment + "_" + _ref2.checkpoint, _ref2.payload);
+                logCheckpoint: function(_ref3) {
+                    logger.info(_ref3.treatment + "_" + _ref3.checkpoint, _extends({}, _ref3.payload, {
+                        throttle: _ref3.throttle.toString()
+                    }));
                     logger.flush();
-                }
+                },
+                sticky: sticky
             });
         }
         function isIOSSafari() {
@@ -1774,7 +1783,7 @@ window.spb = function(modules) {
             logger_getLogger().info("rest_api_create_order_token");
             var headers = ((_headers10 = {}).authorization = "Bearer " + accessToken, _headers10["paypal-partner-attribution-id"] = partnerAttributionID, 
             _headers10["paypal-client-metadata-id"] = clientMetadataID, _headers10["x-app-name"] = "smart-payment-buttons", 
-            _headers10["x-app-version"] = "2.0.366", _headers10);
+            _headers10["x-app-version"] = "2.0.369", _headers10);
             var paymentSource = {
                 token: {
                     id: paymentMethodID,
@@ -2504,7 +2513,9 @@ window.spb = function(modules) {
         function getProps(_ref) {
             var facilitatorAccessToken = _ref.facilitatorAccessToken;
             var xprops = window.xprops;
-            var upgradeLSATExperiment = createExperiment("UPGRADE_LSAT_EXPERIMENT", 1);
+            var upgradeLSATExperiment = createExperiment("UPGRADE_LSAT_EXPERIMENT", {
+                sample: 1
+            });
             var uid = xprops.uid, env = xprops.env, _xprops$vault = xprops.vault, vault = void 0 !== _xprops$vault && _xprops$vault, commit = xprops.commit, locale = xprops.locale, platform = xprops.platform, sessionID = xprops.sessionID, buttonSessionID = xprops.buttonSessionID, clientID = xprops.clientID, partnerAttributionID = xprops.partnerAttributionID, clientMetadataID = xprops.clientMetadataID, _xprops$sdkCorrelatio = xprops.sdkCorrelationID, sdkCorrelationID = void 0 === _xprops$sdkCorrelatio ? xprops.correlationID : _xprops$sdkCorrelatio, getParentDomain = xprops.getParentDomain, clientAccessToken = xprops.clientAccessToken, getPopupBridge = xprops.getPopupBridge, getPrerenderDetails = xprops.getPrerenderDetails, getPageUrl = xprops.getPageUrl, enableThreeDomainSecure = xprops.enableThreeDomainSecure, enableVaultInstallments = xprops.enableVaultInstallments, _xprops$enableNativeC = xprops.enableNativeCheckout, enableNativeCheckout = void 0 !== _xprops$enableNativeC && _xprops$enableNativeC, rememberFunding = xprops.remember, stageHost = xprops.stageHost, apiStageHost = xprops.apiStageHost, style = xprops.style, getParent = xprops.getParent, fundingSource = xprops.fundingSource, currency = xprops.currency, connect = xprops.connect, intent = xprops.intent, merchantID = xprops.merchantID, _xprops$upgradeLSAT = xprops.upgradeLSAT, upgradeLSAT = void 0 === _xprops$upgradeLSAT ? upgradeLSATExperiment.isEnabled() : _xprops$upgradeLSAT, amount = xprops.amount, userIDToken = xprops.userIDToken, enableFunding = xprops.enableFunding, disableFunding = xprops.disableFunding, disableCard = xprops.disableCard, _xprops$getQueriedEli = xprops.getQueriedEligibleFunding, getQueriedEligibleFunding = void 0 === _xprops$getQueriedEli ? function() {
                 return promise_ZalgoPromise.resolve([]);
             } : _xprops$getQueriedEli, storageID = xprops.storageID;
@@ -3027,7 +3038,10 @@ window.spb = function(modules) {
                 nonce: nonce
             }), children));
         }
-        var nativeFakeoutExperiment = createExperiment("native_popup_fakeout", 10);
+        var nativeFakeoutExperiment = createExperiment("native_popup_fakeout_v2_" + (isIOSSafari() ? "ios_safari" : isAndroidChrome() ? "android_chrome" : "unsupported_platform"), {
+            sample: isIOSSafari() ? 50 : 0,
+            sticky: !1
+        });
         var checkoutOpen = !1;
         var canRenderTop = !1;
         var checkout = {
@@ -3084,274 +3098,280 @@ window.spb = function(modules) {
                     }));
                 };
                 var start = memoize((function() {
-                    return (instance = Checkout({
-                        window: win,
-                        sessionID: sessionID,
-                        buttonSessionID: buttonSessionID,
-                        clientAccessToken: clientAccessToken,
-                        venmoPayloadID: venmoPayloadID,
-                        createAuthCode: function() {
-                            return promise_ZalgoPromise.try((function() {
-                                var fundingSkipLogin = FUNDING_SKIP_LOGIN[fundingSource];
-                                return payment.createAccessToken ? payment.createAccessToken() : buyerAccessToken || (clientID && userIDToken && fundingSkipLogin ? getSmartWallet({
-                                    clientID: clientID,
-                                    merchantID: merchantID,
-                                    currency: currency,
-                                    amount: amount,
-                                    clientMetadataID: cmid || sessionID,
-                                    userIDToken: userIDToken,
-                                    env: env,
-                                    cspNonce: cspNonce
-                                }).then((function(wallet) {
-                                    var walletInstruments = wallet[fundingSkipLogin] && wallet[fundingSkipLogin].instruments;
-                                    if (walletInstruments) for (var _i2 = 0; _i2 < walletInstruments.length; _i2++) {
-                                        var instrument = walletInstruments[_i2];
-                                        if (instrument.accessToken) return instrument.accessToken;
-                                    }
-                                })) : void 0);
-                            })).then((function(accessToken) {
-                                if (accessToken && ("pay" === buyerIntent || "pay_with_different_funding_shipping" === buyerIntent)) return function(buyerAccessToken) {
-                                    return callGraphQL({
-                                        name: "ExchangeAuthCode",
-                                        query: "\n            query ExchangeAuthCode(\n                $buyerAccessToken: String!\n            ) {\n                auth(\n                    accessToken: $buyerAccessToken\n                ) {\n                    authCode\n                }\n            }\n        ",
-                                        variables: {
-                                            buyerAccessToken: buyerAccessToken
-                                        }
-                                    }).then((function(_ref4) {
-                                        return _ref4.auth.authCode;
-                                    }));
-                                }(accessToken);
-                            })).catch((function(err) {
-                                logger_getLogger().warn("exchange_access_token_auth_code_error", {
-                                    err: stringifyError(err)
-                                });
-                            }));
-                        },
-                        getConnectURL: connect && connectEligible ? function(_ref9) {
-                            var payerID = _ref9.payerID;
-                            if (!clientID) throw new Error("Expected clientID");
-                            return _createOrder().then((function(orderID) {
-                                return (_ref5 = {
-                                    orderID: orderID,
-                                    payerID: payerID,
-                                    clientID: clientID,
-                                    fundingSource: fundingSource,
-                                    connect: connect
-                                }, callGraphQL({
-                                    name: "GetConnectURL",
-                                    query: "\n            query GetConnectURL(\n                $clientID: String!\n                $orderID: String!\n                $scopes: [String]!\n                $fundingSource: String\n                $payerID: String\n            ) {\n                auth(\n                    clientId: $clientID\n                ) {\n                    connectUrl(\n                        token: $orderID\n                        scopes: $scopes\n                        fundingSource: $fundingSource\n                        payerId: $payerID\n                    ) {\n                        href\n                    }\n                }\n            }\n        ",
-                                    variables: {
-                                        clientID: _ref5.clientID,
-                                        orderID: _ref5.orderID,
-                                        payerID: _ref5.payerID,
-                                        scopes: _ref5.connect.scopes,
-                                        fundingSource: _ref5.fundingSource
-                                    }
-                                }).then((function(_ref6) {
-                                    return _ref6.auth.connectUrl.href;
-                                }))).then((function(connectURL) {
-                                    var _getLogger$info$track;
-                                    logger_getLogger().info("connect_redirect", {
-                                        connectURL: connectURL
-                                    }).track((_getLogger$info$track = {}, _getLogger$info$track.transition_name = "process_connect_redirect", 
-                                    _getLogger$info$track.context_type = "EC-Token", _getLogger$info$track.token = orderID, 
-                                    _getLogger$info$track.context_id = orderID, _getLogger$info$track)).flush();
-                                    return extendUrl(connectURL, {
-                                        query: {
-                                            sdkMeta: sdkMeta
-                                        }
-                                    });
-                                })).catch((function(err) {
-                                    logger_getLogger().error("connect_redirect_error", {
-                                        err: stringifyError(err)
-                                    });
-                                    throw err;
-                                }));
-                                var _ref5;
-                            }));
-                        } : null,
-                        createOrder: function() {
-                            return _createOrder().then((function(orderID) {
+                    return (instance = function() {
+                        nativeFakeoutExperiment.log("web_checkout_start");
+                        return Checkout({
+                            window: win,
+                            sessionID: sessionID,
+                            buttonSessionID: buttonSessionID,
+                            clientAccessToken: clientAccessToken,
+                            venmoPayloadID: venmoPayloadID,
+                            createAuthCode: function() {
                                 return promise_ZalgoPromise.try((function() {
-                                    if (clientID && "pay" === buyerIntent) return function(_ref6) {
-                                        var orderID = _ref6.orderID, vault = _ref6.vault, clientAccessToken = _ref6.clientAccessToken, createBillingAgreement = _ref6.createBillingAgreement, createSubscription = _ref6.createSubscription, fundingSource = _ref6.fundingSource, clientID = _ref6.clientID, merchantID = _ref6.merchantID, buyerCountry = _ref6.buyerCountry, currency = _ref6.currency, commit = _ref6.commit, intent = _ref6.intent, disableFunding = _ref6.disableFunding, disableCard = _ref6.disableCard, userIDToken = _ref6.userIDToken;
-                                        return promise_ZalgoPromise.try((function() {
-                                            logger_getLogger().info("vault_auto_setup_vault_" + vault.toString() + "_id_token_" + (userIDToken ? "present" : "not_present")).flush();
-                                            return function(_ref5) {
-                                                var vault = _ref5.vault, clientAccessToken = _ref5.clientAccessToken, createBillingAgreement = _ref5.createBillingAgreement, createSubscription = _ref5.createSubscription, fundingSource = _ref5.fundingSource, clientID = _ref5.clientID, merchantID = _ref5.merchantID, buyerCountry = _ref5.buyerCountry, currency = _ref5.currency, commit = _ref5.commit, intent = _ref5.intent, disableFunding = _ref5.disableFunding, disableCard = _ref5.disableCard;
-                                                return promise_ZalgoPromise.try((function() {
-                                                    return !!clientAccessToken && !createBillingAgreement && !createSubscription && (!!vault || function(_ref4) {
-                                                        var accessToken = _ref4.accessToken, fundingSource = _ref4.fundingSource, clientID = _ref4.clientID, merchantID = _ref4.merchantID, buyerCountry = _ref4.buyerCountry, currency = _ref4.currency, commit = _ref4.commit, vault = _ref4.vault, intent = _ref4.intent, disableFunding = _ref4.disableFunding, disableCard = _ref4.disableCard;
-                                                        return promise_ZalgoPromise.try((function() {
-                                                            return "paypal" === fundingSource && function(query, _ref) {
-                                                                var _headers;
-                                                                var accessToken = _ref.accessToken, intent = _ref.intent, disableFunding = _ref.disableFunding, disableCard = _ref.disableCard;
-                                                                return callGraphQL({
-                                                                    name: "GetFundingEligibility",
-                                                                    query: "\n            query GetFundingEligibility(\n                $clientID:String,\n                $merchantID:[ String ],\n                $buyerCountry:CountryCodes,\n                $currency:SupportedCountryCurrencies,\n                $intent:FundingEligibilityIntent,\n                $commit:Boolean,\n                $vault:Boolean,\n                $disableFunding:[ SupportedPaymentMethodsType ],\n                $disableCard:[ SupportedCardsType ]\n            ) {\n            fundingEligibility(\n                clientId: $clientID,\n                buyerCountry: $buyerCountry,\n                currency: $currency,\n                intent: $intent,\n                commit: $commit,\n                vault: $vault,\n                disableFunding: $disableFunding,\n                disableCard: $disableCard,\n                merchantId: $merchantID\n            ) {\n                " + query + "\n            }\n          }\n        ",
-                                                                    variables: {
-                                                                        clientID: _ref.clientID,
-                                                                        merchantID: _ref.merchantID,
-                                                                        buyerCountry: _ref.buyerCountry,
-                                                                        currency: _ref.currency,
-                                                                        commit: _ref.commit,
-                                                                        vault: _ref.vault,
-                                                                        intent: intent ? intent.toUpperCase() : intent,
-                                                                        disableFunding: disableFunding ? disableFunding.map((function(f) {
-                                                                            return f && f.toUpperCase();
-                                                                        })) : disableFunding,
-                                                                        disableCard: disableCard ? disableCard.map((function(f) {
-                                                                            return f && f.toUpperCase();
-                                                                        })) : disableCard
-                                                                    },
-                                                                    headers: (_headers = {}, _headers["x-paypal-internal-euat"] = accessToken || "", 
-                                                                    _headers)
-                                                                }).then((function(gqlResult) {
-                                                                    if (!gqlResult || !gqlResult.fundingEligibility) throw new Error("GraphQL fundingEligibility returned no fundingEligibility object");
-                                                                    return gqlResult && gqlResult.fundingEligibility;
-                                                                }));
-                                                            }("\n                " + fundingSource + " {\n                    vaultable\n                }\n            ", {
-                                                                accessToken: accessToken,
-                                                                clientID: clientID,
-                                                                merchantID: merchantID,
-                                                                buyerCountry: buyerCountry,
-                                                                currency: currency,
-                                                                commit: commit,
-                                                                vault: vault,
-                                                                intent: intent,
-                                                                disableFunding: disableFunding,
-                                                                disableCard: disableCard
-                                                            }).then((function(newFundingEligibility) {
-                                                                return !(!newFundingEligibility[fundingSource] || !newFundingEligibility[fundingSource].vaultable);
-                                                            }));
-                                                        }));
-                                                    }({
-                                                        accessToken: clientAccessToken,
-                                                        fundingSource: fundingSource,
-                                                        clientID: clientID,
-                                                        merchantID: merchantID,
-                                                        buyerCountry: buyerCountry,
-                                                        currency: currency,
-                                                        commit: commit,
-                                                        vault: vault,
-                                                        intent: intent,
-                                                        disableFunding: disableFunding,
-                                                        disableCard: disableCard
-                                                    }).catch((function(err) {
-                                                        logger_getLogger().warn("funding_vaultable_error", {
-                                                            err: stringifyError(err)
-                                                        });
-                                                        return !1;
-                                                    })));
-                                                }));
-                                            }({
-                                                vault: vault,
-                                                clientAccessToken: clientAccessToken,
-                                                createBillingAgreement: createBillingAgreement,
-                                                createSubscription: createSubscription,
-                                                fundingSource: fundingSource,
-                                                clientID: clientID,
-                                                merchantID: merchantID,
-                                                buyerCountry: buyerCountry,
-                                                currency: currency,
-                                                commit: commit,
-                                                intent: intent,
-                                                disableFunding: disableFunding,
-                                                disableCard: disableCard
-                                            });
-                                        })).then((function(eligible) {
-                                            if (eligible && clientAccessToken) return function(_ref7) {
-                                                var _headers11;
-                                                var orderID = _ref7.orderID;
-                                                return callGraphQL({
-                                                    name: "EnableVault",
-                                                    query: "\n            mutation EnableVault(\n                $orderID : String!\n            ) {\n                enableVault(\n                    token: $orderID\n                )\n            }\n        ",
-                                                    variables: {
-                                                        orderID: orderID
-                                                    },
-                                                    headers: (_headers11 = {}, _headers11["x-paypal-internal-euat"] = _ref7.clientAccessToken, 
-                                                    _headers11["paypal-client-context"] = orderID, _headers11)
-                                                });
-                                            }({
-                                                orderID: orderID,
-                                                clientAccessToken: clientAccessToken
-                                            }).catch((function(err) {
-                                                if (vault) throw err;
-                                            }));
-                                        }));
-                                    }({
-                                        orderID: orderID,
-                                        vault: vault,
-                                        clientAccessToken: clientAccessToken,
-                                        fundingEligibility: fundingEligibility,
-                                        fundingSource: fundingSource,
-                                        createBillingAgreement: createBillingAgreement,
-                                        createSubscription: createSubscription,
+                                    var fundingSkipLogin = FUNDING_SKIP_LOGIN[fundingSource];
+                                    return payment.createAccessToken ? payment.createAccessToken() : buyerAccessToken || (clientID && userIDToken && fundingSkipLogin ? getSmartWallet({
                                         clientID: clientID,
                                         merchantID: merchantID,
-                                        buyerCountry: buyerCountry,
                                         currency: currency,
-                                        commit: commit,
-                                        intent: intent,
-                                        disableFunding: disableFunding,
-                                        disableCard: disableCard,
-                                        userIDToken: userIDToken
+                                        amount: amount,
+                                        clientMetadataID: cmid || sessionID,
+                                        userIDToken: userIDToken,
+                                        env: env,
+                                        cspNonce: cspNonce
+                                    }).then((function(wallet) {
+                                        var walletInstruments = wallet[fundingSkipLogin] && wallet[fundingSkipLogin].instruments;
+                                        if (walletInstruments) for (var _i2 = 0; _i2 < walletInstruments.length; _i2++) {
+                                            var instrument = walletInstruments[_i2];
+                                            if (instrument.accessToken) return instrument.accessToken;
+                                        }
+                                    })) : void 0);
+                                })).then((function(accessToken) {
+                                    if (accessToken && ("pay" === buyerIntent || "pay_with_different_funding_shipping" === buyerIntent)) return function(buyerAccessToken) {
+                                        return callGraphQL({
+                                            name: "ExchangeAuthCode",
+                                            query: "\n            query ExchangeAuthCode(\n                $buyerAccessToken: String!\n            ) {\n                auth(\n                    accessToken: $buyerAccessToken\n                ) {\n                    authCode\n                }\n            }\n        ",
+                                            variables: {
+                                                buyerAccessToken: buyerAccessToken
+                                            }
+                                        }).then((function(_ref4) {
+                                            return _ref4.auth.authCode;
+                                        }));
+                                    }(accessToken);
+                                })).catch((function(err) {
+                                    logger_getLogger().warn("exchange_access_token_auth_code_error", {
+                                        err: stringifyError(err)
                                     });
-                                })).then((function() {
-                                    return orderID;
                                 }));
-                            }));
-                        },
-                        onApprove: function(_ref10) {
-                            var payerID = _ref10.payerID, paymentID = _ref10.paymentID, billingToken = _ref10.billingToken, subscriptionID = _ref10.subscriptionID, authCode = _ref10.authCode;
-                            approved = !0;
-                            nativeFakeoutExperiment.logComplete();
-                            logger_getLogger().info("spb_onapprove_access_token_" + (buyerAccessToken ? "present" : "not_present")).flush();
-                            return close().then((function() {
-                                return _onApprove({
-                                    payerID: payerID,
-                                    paymentID: paymentID,
-                                    billingToken: billingToken,
-                                    subscriptionID: subscriptionID,
-                                    buyerAccessToken: buyerAccessToken,
-                                    authCode: authCode
-                                }, {
-                                    restart: restart
-                                }).catch(src_util_noop);
-                            }));
-                        },
-                        onAuth: function(_ref11) {
-                            return _onAuth({
-                                accessToken: _ref11.accessToken || buyerAccessToken
-                            }).then((function(token) {
-                                buyerAccessToken = token;
-                            }));
-                        },
-                        onCancel: function() {
-                            return close().then((function() {
-                                return _onCancel();
-                            }));
-                        },
-                        onShippingChange: onShippingChange ? function(data, actions) {
-                            return onShippingChange(_extends({
-                                buyerAccessToken: buyerAccessToken
-                            }, data), actions);
-                        } : null,
-                        onClose: function() {
-                            checkoutOpen = !1;
-                            if (!forceClosed && !approved) return _onCancel();
-                        },
-                        onError: onError,
-                        fundingSource: fundingSource,
-                        card: card,
-                        buyerCountry: buyerCountry,
-                        locale: locale,
-                        commit: commit,
-                        cspNonce: cspNonce,
-                        clientMetadataID: cmid,
-                        enableFunding: enableFunding,
-                        standaloneFundingSource: standaloneFundingSource
-                    })).renderTo((top = getTop(window), canRenderTop && top ? top : utils_getParent() ? utils_getParent() : window), "body", context).catch((function(err) {
+                            },
+                            getConnectURL: connect && connectEligible ? function(_ref9) {
+                                var payerID = _ref9.payerID;
+                                if (!clientID) throw new Error("Expected clientID");
+                                return _createOrder().then((function(orderID) {
+                                    return (_ref5 = {
+                                        orderID: orderID,
+                                        payerID: payerID,
+                                        clientID: clientID,
+                                        fundingSource: fundingSource,
+                                        connect: connect
+                                    }, callGraphQL({
+                                        name: "GetConnectURL",
+                                        query: "\n            query GetConnectURL(\n                $clientID: String!\n                $orderID: String!\n                $scopes: [String]!\n                $fundingSource: String\n                $payerID: String\n            ) {\n                auth(\n                    clientId: $clientID\n                ) {\n                    connectUrl(\n                        token: $orderID\n                        scopes: $scopes\n                        fundingSource: $fundingSource\n                        payerId: $payerID\n                    ) {\n                        href\n                    }\n                }\n            }\n        ",
+                                        variables: {
+                                            clientID: _ref5.clientID,
+                                            orderID: _ref5.orderID,
+                                            payerID: _ref5.payerID,
+                                            scopes: _ref5.connect.scopes,
+                                            fundingSource: _ref5.fundingSource
+                                        }
+                                    }).then((function(_ref6) {
+                                        return _ref6.auth.connectUrl.href;
+                                    }))).then((function(connectURL) {
+                                        var _getLogger$info$track;
+                                        logger_getLogger().info("connect_redirect", {
+                                            connectURL: connectURL
+                                        }).track((_getLogger$info$track = {}, _getLogger$info$track.transition_name = "process_connect_redirect", 
+                                        _getLogger$info$track.context_type = "EC-Token", _getLogger$info$track.token = orderID, 
+                                        _getLogger$info$track.context_id = orderID, _getLogger$info$track)).flush();
+                                        return extendUrl(connectURL, {
+                                            query: {
+                                                sdkMeta: sdkMeta
+                                            }
+                                        });
+                                    })).catch((function(err) {
+                                        logger_getLogger().error("connect_redirect_error", {
+                                            err: stringifyError(err)
+                                        });
+                                        throw err;
+                                    }));
+                                    var _ref5;
+                                }));
+                            } : null,
+                            createOrder: function() {
+                                return _createOrder().then((function(orderID) {
+                                    return promise_ZalgoPromise.try((function() {
+                                        if (clientID && "pay" === buyerIntent) return function(_ref6) {
+                                            var orderID = _ref6.orderID, vault = _ref6.vault, clientAccessToken = _ref6.clientAccessToken, createBillingAgreement = _ref6.createBillingAgreement, createSubscription = _ref6.createSubscription, fundingSource = _ref6.fundingSource, clientID = _ref6.clientID, merchantID = _ref6.merchantID, buyerCountry = _ref6.buyerCountry, currency = _ref6.currency, commit = _ref6.commit, intent = _ref6.intent, disableFunding = _ref6.disableFunding, disableCard = _ref6.disableCard, userIDToken = _ref6.userIDToken;
+                                            return promise_ZalgoPromise.try((function() {
+                                                logger_getLogger().info("vault_auto_setup_vault_" + vault.toString() + "_id_token_" + (userIDToken ? "present" : "not_present")).flush();
+                                                return function(_ref5) {
+                                                    var vault = _ref5.vault, clientAccessToken = _ref5.clientAccessToken, createBillingAgreement = _ref5.createBillingAgreement, createSubscription = _ref5.createSubscription, fundingSource = _ref5.fundingSource, clientID = _ref5.clientID, merchantID = _ref5.merchantID, buyerCountry = _ref5.buyerCountry, currency = _ref5.currency, commit = _ref5.commit, intent = _ref5.intent, disableFunding = _ref5.disableFunding, disableCard = _ref5.disableCard;
+                                                    return promise_ZalgoPromise.try((function() {
+                                                        return !!clientAccessToken && !createBillingAgreement && !createSubscription && (!!vault || function(_ref4) {
+                                                            var accessToken = _ref4.accessToken, fundingSource = _ref4.fundingSource, clientID = _ref4.clientID, merchantID = _ref4.merchantID, buyerCountry = _ref4.buyerCountry, currency = _ref4.currency, commit = _ref4.commit, vault = _ref4.vault, intent = _ref4.intent, disableFunding = _ref4.disableFunding, disableCard = _ref4.disableCard;
+                                                            return promise_ZalgoPromise.try((function() {
+                                                                return "paypal" === fundingSource && function(query, _ref) {
+                                                                    var _headers;
+                                                                    var accessToken = _ref.accessToken, intent = _ref.intent, disableFunding = _ref.disableFunding, disableCard = _ref.disableCard;
+                                                                    return callGraphQL({
+                                                                        name: "GetFundingEligibility",
+                                                                        query: "\n            query GetFundingEligibility(\n                $clientID:String,\n                $merchantID:[ String ],\n                $buyerCountry:CountryCodes,\n                $currency:SupportedCountryCurrencies,\n                $intent:FundingEligibilityIntent,\n                $commit:Boolean,\n                $vault:Boolean,\n                $disableFunding:[ SupportedPaymentMethodsType ],\n                $disableCard:[ SupportedCardsType ]\n            ) {\n            fundingEligibility(\n                clientId: $clientID,\n                buyerCountry: $buyerCountry,\n                currency: $currency,\n                intent: $intent,\n                commit: $commit,\n                vault: $vault,\n                disableFunding: $disableFunding,\n                disableCard: $disableCard,\n                merchantId: $merchantID\n            ) {\n                " + query + "\n            }\n          }\n        ",
+                                                                        variables: {
+                                                                            clientID: _ref.clientID,
+                                                                            merchantID: _ref.merchantID,
+                                                                            buyerCountry: _ref.buyerCountry,
+                                                                            currency: _ref.currency,
+                                                                            commit: _ref.commit,
+                                                                            vault: _ref.vault,
+                                                                            intent: intent ? intent.toUpperCase() : intent,
+                                                                            disableFunding: disableFunding ? disableFunding.map((function(f) {
+                                                                                return f && f.toUpperCase();
+                                                                            })) : disableFunding,
+                                                                            disableCard: disableCard ? disableCard.map((function(f) {
+                                                                                return f && f.toUpperCase();
+                                                                            })) : disableCard
+                                                                        },
+                                                                        headers: (_headers = {}, _headers["x-paypal-internal-euat"] = accessToken || "", 
+                                                                        _headers)
+                                                                    }).then((function(gqlResult) {
+                                                                        if (!gqlResult || !gqlResult.fundingEligibility) throw new Error("GraphQL fundingEligibility returned no fundingEligibility object");
+                                                                        return gqlResult && gqlResult.fundingEligibility;
+                                                                    }));
+                                                                }("\n                " + fundingSource + " {\n                    vaultable\n                }\n            ", {
+                                                                    accessToken: accessToken,
+                                                                    clientID: clientID,
+                                                                    merchantID: merchantID,
+                                                                    buyerCountry: buyerCountry,
+                                                                    currency: currency,
+                                                                    commit: commit,
+                                                                    vault: vault,
+                                                                    intent: intent,
+                                                                    disableFunding: disableFunding,
+                                                                    disableCard: disableCard
+                                                                }).then((function(newFundingEligibility) {
+                                                                    return !(!newFundingEligibility[fundingSource] || !newFundingEligibility[fundingSource].vaultable);
+                                                                }));
+                                                            }));
+                                                        }({
+                                                            accessToken: clientAccessToken,
+                                                            fundingSource: fundingSource,
+                                                            clientID: clientID,
+                                                            merchantID: merchantID,
+                                                            buyerCountry: buyerCountry,
+                                                            currency: currency,
+                                                            commit: commit,
+                                                            vault: vault,
+                                                            intent: intent,
+                                                            disableFunding: disableFunding,
+                                                            disableCard: disableCard
+                                                        }).catch((function(err) {
+                                                            logger_getLogger().warn("funding_vaultable_error", {
+                                                                err: stringifyError(err)
+                                                            });
+                                                            return !1;
+                                                        })));
+                                                    }));
+                                                }({
+                                                    vault: vault,
+                                                    clientAccessToken: clientAccessToken,
+                                                    createBillingAgreement: createBillingAgreement,
+                                                    createSubscription: createSubscription,
+                                                    fundingSource: fundingSource,
+                                                    clientID: clientID,
+                                                    merchantID: merchantID,
+                                                    buyerCountry: buyerCountry,
+                                                    currency: currency,
+                                                    commit: commit,
+                                                    intent: intent,
+                                                    disableFunding: disableFunding,
+                                                    disableCard: disableCard
+                                                });
+                                            })).then((function(eligible) {
+                                                if (eligible && clientAccessToken) return function(_ref7) {
+                                                    var _headers11;
+                                                    var orderID = _ref7.orderID;
+                                                    return callGraphQL({
+                                                        name: "EnableVault",
+                                                        query: "\n            mutation EnableVault(\n                $orderID : String!\n            ) {\n                enableVault(\n                    token: $orderID\n                )\n            }\n        ",
+                                                        variables: {
+                                                            orderID: orderID
+                                                        },
+                                                        headers: (_headers11 = {}, _headers11["x-paypal-internal-euat"] = _ref7.clientAccessToken, 
+                                                        _headers11["paypal-client-context"] = orderID, _headers11)
+                                                    });
+                                                }({
+                                                    orderID: orderID,
+                                                    clientAccessToken: clientAccessToken
+                                                }).catch((function(err) {
+                                                    if (vault) throw err;
+                                                }));
+                                            }));
+                                        }({
+                                            orderID: orderID,
+                                            vault: vault,
+                                            clientAccessToken: clientAccessToken,
+                                            fundingEligibility: fundingEligibility,
+                                            fundingSource: fundingSource,
+                                            createBillingAgreement: createBillingAgreement,
+                                            createSubscription: createSubscription,
+                                            clientID: clientID,
+                                            merchantID: merchantID,
+                                            buyerCountry: buyerCountry,
+                                            currency: currency,
+                                            commit: commit,
+                                            intent: intent,
+                                            disableFunding: disableFunding,
+                                            disableCard: disableCard,
+                                            userIDToken: userIDToken
+                                        });
+                                    })).then((function() {
+                                        return orderID;
+                                    }));
+                                }));
+                            },
+                            onApprove: function(_ref10) {
+                                var payerID = _ref10.payerID, paymentID = _ref10.paymentID, billingToken = _ref10.billingToken, subscriptionID = _ref10.subscriptionID, authCode = _ref10.authCode;
+                                approved = !0;
+                                nativeFakeoutExperiment.logComplete();
+                                logger_getLogger().info("spb_onapprove_access_token_" + (buyerAccessToken ? "present" : "not_present")).flush();
+                                return close().then((function() {
+                                    return _onApprove({
+                                        payerID: payerID,
+                                        paymentID: paymentID,
+                                        billingToken: billingToken,
+                                        subscriptionID: subscriptionID,
+                                        buyerAccessToken: buyerAccessToken,
+                                        authCode: authCode
+                                    }, {
+                                        restart: restart
+                                    }).catch(src_util_noop);
+                                }));
+                            },
+                            onAuth: function(_ref11) {
+                                var accessToken = _ref11.accessToken;
+                                nativeFakeoutExperiment.log("web_checkout_auth");
+                                return _onAuth({
+                                    accessToken: accessToken || buyerAccessToken
+                                }).then((function(token) {
+                                    buyerAccessToken = token;
+                                }));
+                            },
+                            onCancel: function() {
+                                nativeFakeoutExperiment.log("web_checkout_cancel");
+                                return close().then((function() {
+                                    return _onCancel();
+                                }));
+                            },
+                            onShippingChange: onShippingChange ? function(data, actions) {
+                                return onShippingChange(_extends({
+                                    buyerAccessToken: buyerAccessToken
+                                }, data), actions);
+                            } : null,
+                            onClose: function() {
+                                checkoutOpen = !1;
+                                if (!forceClosed && !approved) return _onCancel();
+                            },
+                            onError: onError,
+                            fundingSource: fundingSource,
+                            card: card,
+                            buyerCountry: buyerCountry,
+                            locale: locale,
+                            commit: commit,
+                            cspNonce: cspNonce,
+                            clientMetadataID: cmid,
+                            enableFunding: enableFunding,
+                            standaloneFundingSource: standaloneFundingSource
+                        });
+                    }()).renderTo((top = getTop(window), canRenderTop && top ? top : utils_getParent() ? utils_getParent() : window), "body", context).catch((function(err) {
                         if (checkoutOpen) throw err;
                     }));
                     var top;
@@ -4838,7 +4858,6 @@ window.spb = function(modules) {
                 var approved = !1;
                 var cancelled = !1;
                 var didFallback = !1;
-                nativeFakeoutExperiment.logStart();
                 logger_getLogger().info("native_start_" + (isIOSSafari() ? "ios" : "android") + "_window_width_" + window.outerWidth).info("native_start_" + (isIOSSafari() ? "ios" : "android") + "_window_height_" + window.outerHeight).info("native_stickiness_id_" + (isIOSSafari() ? "ios" : "android") + "_" + function() {
                     return (function(str) {
                         var hash = 0;
@@ -5694,6 +5713,7 @@ window.spb = function(modules) {
                                                 var startPromise = promise_ZalgoPromise.try((function() {
                                                     return updateClientConfigPromise;
                                                 })).then((function() {
+                                                    nativeFakeoutExperiment.logStart();
                                                     return start();
                                                 }));
                                                 var validateOrderPromise = createOrder().then((function(orderID) {
@@ -6192,7 +6212,7 @@ window.spb = function(modules) {
                     var _ref2;
                     return (_ref2 = {}).state_name = "smart_button", _ref2.context_type = "button_session_id", 
                     _ref2.context_id = buttonSessionID, _ref2.state_name = "smart_button", _ref2.button_session_id = buttonSessionID, 
-                    _ref2.button_version = "2.0.366", _ref2.button_correlation_id = buttonCorrelationID, 
+                    _ref2.button_version = "2.0.369", _ref2.button_correlation_id = buttonCorrelationID, 
                     _ref2.stickiness_id = stickinessID, _ref2.bn_code = partnerAttributionID, _ref2.user_action = commit ? "commit" : "continue", 
                     _ref2.seller_id = merchantID[0], _ref2.merchant_domain = merchantDomain, _ref2.t = Date.now().toString(), 
                     _ref2;
