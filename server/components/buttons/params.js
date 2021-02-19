@@ -75,7 +75,8 @@ type ButtonParams = {|
     riskData : ?RiskData,
     correlationID : string,
     platform : $Values<typeof PLATFORM>,
-    cookies : string
+    cookies : string,
+    merchantDomain : string
 |};
 
 function getCookieString(req : ExpressRequest) : string {
@@ -111,7 +112,7 @@ function getFundingEligibilityParam(req : ExpressRequest) : FundingEligibilityTy
             throw new makeError(ERROR_CODE.VALIDATION_ERROR, `Invalid funding eligibility: ${ encodedFundingEligibility }`, err);
         }
         const fundingEligibility = getDefaultFundingEligibility();
-        
+
         for (const fundingSource of values(FUNDING)) {
             const fundingSourceEligibilityInput = fundingEligibilityInput[fundingSource] || {};
             const fundingSourceEligibility = fundingEligibility[fundingSource] = {};
@@ -148,11 +149,11 @@ function getFundingEligibilityParam(req : ExpressRequest) : FundingEligibilityTy
                         if (typeof vendorEligibilityInput.eligible === 'boolean') {
                             vendorEligibility.eligible = vendorEligibilityInput.eligible;
                         }
-        
+
                         if (typeof vendorEligibilityInput.branded === 'boolean') {
                             vendorEligibility.branded = vendorEligibilityInput.branded;
                         }
-        
+
                         if (typeof vendorEligibilityInput.vaultable === 'boolean') {
                             vendorEligibility.vaultable = vendorEligibilityInput.vaultable;
                         }
@@ -180,7 +181,7 @@ function getFundingEligibilityParam(req : ExpressRequest) : FundingEligibilityTy
 
         return fundingEligibility;
     }
-    
+
     return {
         [ FUNDING.PAYPAL ]: {
             eligible: true
@@ -251,6 +252,17 @@ function getStyle(params : ButtonInputParams) : Style {
     return { label, period };
 }
 
+function getMerchantDomainFromReferer(req : ExpressRequest) : string {
+    const referer = req.get('Referer');
+    let host = '';
+    try {
+        const url = new URL(referer);
+        host = url.host;
+    } catch {}
+
+    return host;
+}
+
 export function getButtonParams(params : ButtonInputParams, req : ExpressRequest, res : ExpressResponse) : ButtonParams {
     const {
         env,
@@ -284,6 +296,7 @@ export function getButtonParams(params : ButtonInputParams, req : ExpressRequest
     const correlationID = req.correlationId || '';
 
     const cookies = getCookieString(req);
+    const merchantDomain = getMerchantDomainFromReferer(req);
 
     return {
         env,
@@ -312,7 +325,8 @@ export function getButtonParams(params : ButtonInputParams, req : ExpressRequest
         clientMetadataID,
         correlationID,
         platform,
-        cookies
+        cookies,
+        merchantDomain
     };
 }
 
@@ -340,7 +354,7 @@ export function getButtonPreflightParams(params : ButtonPreflightInputParams) : 
         [ SPB_QUERY_KEYS.USER_ID_TOKEN ]: userIDToken,
         [ SPB_QUERY_KEYS.AMOUNT ]: amount = '0.00'
     } = params;
-    
+
     if (merchantID) {
         merchantID = merchantID.split(',');
     } else {

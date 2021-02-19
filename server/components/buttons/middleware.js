@@ -53,13 +53,13 @@ export function getButtonMiddleware({
     return sdkMiddleware({ logger, cache }, {
         app: async ({ req, res, params, meta, logBuffer, sdkMeta }) => {
             logger.info(req, EVENT.RENDER);
-            
+
             tracking(req);
 
             const { env, clientID, buttonSessionID, cspNonce, debug, buyerCountry, disableFunding, disableCard, userIDToken, amount,
-                merchantID: sdkMerchantID, currency, intent, commit, vault, clientAccessToken, basicFundingEligibility, locale,
+                merchantID: sdkMerchantID, merchantDomain, currency, intent, commit, vault, clientAccessToken, basicFundingEligibility, locale,
                 clientMetadataID, pageSessionID, correlationID, cookies, enableFunding } = getButtonParams(params, req, res);
-            
+
             logger.info(req, `button_params`, { params: JSON.stringify(params) });
 
             if (!clientID) {
@@ -82,7 +82,7 @@ export function getButtonMiddleware({
             ).catch(() => false);
 
             const fundingEligibilityPromise = resolveFundingEligibility(req, gqlBatch, {
-                logger, clientID, merchantID: sdkMerchantID, buttonSessionID, currency, intent, commit, vault,
+                logger, clientID, merchantID: sdkMerchantID, merchantDomain, buttonSessionID, currency, intent, commit, vault,
                 disableFunding, disableCard, clientAccessToken, buyerCountry, basicFundingEligibility, enableFunding
             });
 
@@ -131,7 +131,7 @@ export function getButtonMiddleware({
             } catch (err) {
                 return clientErrorResponse(res, err.stack || err.message);
             }
-            
+
             const buttonHTML = render.button.Buttons(buttonProps).render(html());
 
             const setupParams = {
@@ -144,7 +144,7 @@ export function getButtonMiddleware({
                 <head></head>
                 <body data-nonce="${ cspNonce }" data-client-version="${ client.version }" data-render-version="${ render.version }">
                     <style nonce="${ cspNonce }">${ buttonStyle }</style>
-                    
+
                     <div id="buttons-container" class="buttons-container">${ buttonHTML }</div>
 
                     ${ meta.getSDKLoader({ nonce: cspNonce }) }

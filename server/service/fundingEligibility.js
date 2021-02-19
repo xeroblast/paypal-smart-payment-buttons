@@ -23,7 +23,8 @@ function buildFundingEligibilityQuery(basicFundingEligibility : FundingEligibili
         $disableCard:     '[ SupportedCardsType ]',
         $merchantID:      '[ String ]',
         $buttonSessionID: 'String',
-        $userAgent:       'String'
+        $userAgent:       'String',
+        $domain:          'String'
     };
 
     const Inputs = {
@@ -40,7 +41,8 @@ function buildFundingEligibilityQuery(basicFundingEligibility : FundingEligibili
         disableCard:     '$disableCard',
         merchantId:      '$merchantID',
         buttonSessionId: '$buttonSessionID',
-        userAgent:       '$userAgent'
+        userAgent:       '$userAgent',
+        domain:          '$domain'
     };
 
     const getBasicFundingEligibilityQuery = () => {
@@ -149,12 +151,13 @@ export type FundingEligibilityOptions = {|
     disableFunding : $ReadOnlyArray<$Values<typeof FUNDING>>,
     disableCard : $ReadOnlyArray<$Values<typeof CARD>>,
     merchantID : ?$ReadOnlyArray<string>,
+    merchantDomain : string,
     buttonSessionID : string,
     clientAccessToken : ?string,
     basicFundingEligibility : FundingEligibilityType
 |};
 
-export async function resolveFundingEligibility(req : ExpressRequest, gqlBatch : GraphQLBatchCall, { logger, clientID, merchantID, buttonSessionID,
+export async function resolveFundingEligibility(req : ExpressRequest, gqlBatch : GraphQLBatchCall, { logger, clientID, merchantID, merchantDomain, buttonSessionID,
     currency, intent, commit, vault, enableFunding = [], disableFunding = [], disableCard = [], clientAccessToken, buyerCountry, basicFundingEligibility } : FundingEligibilityOptions) : Promise<FundingEligibilityType> {
 
     try {
@@ -183,7 +186,8 @@ export async function resolveFundingEligibility(req : ExpressRequest, gqlBatch :
                 intent:         intent.toUpperCase(),
                 disableFunding: disableFunding.map(source => source.toUpperCase()),
                 disableCard:    disableCard.map(card => card.toUpperCase()),
-                enableFunding:  enableFunding.map(source => source.toUpperCase())
+                enableFunding:  enableFunding.map(source => source.toUpperCase()),
+                domain:         merchantDomain
             },
             accessToken: clientAccessToken,
             timeout:     FUNDING_ELIGIBILITY_TIMEOUT
